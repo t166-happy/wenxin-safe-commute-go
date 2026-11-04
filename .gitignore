@@ -1,0 +1,11 @@
+node_modules/
+dist/
+test-results/
+playwright-report/
+test-results-offline/
+*.log
+picture/
+picture_review/
+/.playwright-mcp/
+/*.HEIC
+/*.heic

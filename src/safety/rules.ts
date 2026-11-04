@@ -1,0 +1,41 @@
+export interface RuleDefinition {
+  ruleId: string; sceneIds: string[]; ruleText: string; predicates: string[];
+  explanationId: string; correctiveActionId: string; isCritical: boolean;
+}
+const rule = (ruleId: string, ruleText: string, predicates: string[]): RuleDefinition => ({ruleId,ruleText,predicates,sceneIds:['*'],explanationId:`${ruleId}.why`,correctiveActionId:`${ruleId}.how`,isCritical:true});
+export const rules: Record<string, RuleDefinition> = {
+  approach:rule('approach','請沿行人空間走到標記旁。',['nearTarget']),
+  cross:rule('cross','先停看，等行人綠燈、車輛停讓及導護安全引導。',['stopped','lookLeft','lookRight','green','trafficYielded','adultCleared','onCrosswalk']),
+  barrier:rule('barrier','鏈條是人車分界，請走指定登車口。',['boundaryClear']),
+  vehicleLane:rule('vehicleLane','候車請留在人行空間，不站進車輛進場與停靠動線。',['safePlace']),
+  gate:rule('gate','先核對車輛、排隊，等車停妥及成人放行。',['vehicleStopped','vehicleCorrect','adultCleared','studentTurn','crossingConflictFree']),
+  board:rule('board','車停穩、開門、輪到自己，再依引導上車。',['vehicleStopped','doorOpen','vehicleCorrect','adultCleared','studentTurn','crossingConflictFree']),
+  seat:rule('seat','請走到指定的 02A 座位。',['correctSeat']),
+  buckle:rule('buckle','坐好再將安全帶扣合。',['seated']),
+  depart:rule('depart','坐定並繫好安全帶才可發車。',['seated','buckled']),
+  unbuckle:rule('unbuckle','車輛停穩才解開安全帶。',['vehicleStopped']),
+  leaveSeat:rule('leaveSeat','車停穩、解開安全帶後，才依序離座。',['vehicleStopped','unbuckled']),
+  alight:rule('alight','停穩、確認安全側及周遭車況，再依序下車。',['vehicleStopped','doorOpen','adultCleared','safeSide','rearChecked','unbuckled']),
+  platform:rule('platform','留在月台安全線後，車門警示時等下一班。',['behindLine','correctDirection','doorNotClosing']),
+  rail:rule('rail','請先在車內站穩扶好。',['holdingRail']),
+  busExit:rule('busExit','下車後走行人空間，遠離車頭車尾遮蔽。',['clearOfBlindSpot']),
+  parentPark:rule('parentPark','家長須在示意停靠區短暫停妥，不占用行人通道；車還在移動時先坐好。',['vehicleStopped','safeStop','seated','buckled']),
+  parentRear:rule('parentRear','開門前看後方汽機車與自行車；有車接近時先等。',['vehicleStopped','rearTrafficClear','unbuckled']),
+  parentSide:rule('parentSide','確認後方淨空，選靠人行道的安全側車門。',['vehicleStopped','rearChecked','rearTrafficClear','safeSide']),
+  parentAlight:rule('parentAlight','車停穩、解帶並確認後方與安全側後，才能開門下車。',['vehicleStopped','doorOpen','rearChecked','rearTrafficClear','safeSide','unbuckled']),
+  parentClear:rule('parentClear','下車後關好車門，走到人行道；家長確認安全後儘速駛離，不久佔路側。',['vehicleStopped','rearChecked','safeSide','unbuckled']),
+  helmet:rule('helmet','先在安全區戴合適安全帽並扣緊。',['helmeted','safePlace']),
+  scooterBoard:rule('scooterBoard','機車停穩、核對成人並戴好安全帽，才由安全側上車。',['vehicleStopped','vehicleCorrect','adultCleared','studentTurn','crossingConflictFree','helmeted']),
+  scooterSide:rule('scooterSide','先核對接送成人，留意後方車況，再由安全側接近機車。',['vehicleCorrect','safeSide','rearChecked','vehicleStopped']),
+  scooterSeat:rule('scooterSeat','在乘客位置坐穩，不搶先移動。',['correctSeat','vehicleStopped']),
+  footrest:rule('footrest','坐穩後雙腳放在腳踏處。',['seated','helmeted','feetOnFootrests']),
+  scooterDepart:rule('scooterDepart','安全帽扣好、坐穩並放穩雙腳後才出發。',['seated','helmeted','feetOnFootrests']),
+  scooterArrival:rule('scooterArrival','前車離開後依序停靠；機車完全停妥，乘客保持坐穩並扣好安全帽。',['motorcycleTurn','vehicleStopped','seated','helmeted','feetOnFootrests']),
+  scooterRear:rule('scooterRear','下車前看後方車輛與行人；有車接近時先等。',['vehicleStopped','rearTrafficClear','seated']),
+  scooterAlight:rule('scooterAlight','機車停穩、成人確認，觀察後方與人行道側後再下車。',['vehicleStopped','adultCleared','safeSide','rearChecked','rearTrafficClear']),
+  scooterClear:rule('scooterClear','下車後離開停靠點、走回人行道，機車依序駛離且不與汽車接送混流。',['vehicleStopped','rearChecked','safePlace']),
+  scooterStaySeated:rule('scooterStaySeated','行進中保持坐穩，雙腳放穩腳踏處。',['vehicleStopped']),
+  improve:rule('improve','保留無障礙與救援通道，設施不可遮住視線。',['accessible','emergencyClear','sightClear']),
+  courtesy:rule('courtesy','在安全位置、停車後向工作人員致意。',['vehicleStopped','safePlace']),
+  help:rule('help','留在安全區，向老師或隨車人員求助。',['safePlace']),
+};

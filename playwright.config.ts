@@ -1,0 +1,2 @@
+import {defineConfig} from '@playwright/test';
+export default defineConfig({testDir:'tests/e2e',timeout:180000,expect:{timeout:15000},workers:1,reporter:[['list'],['html',{open:'never'}]],use:{baseURL:'http://127.0.0.1:5173',headless:true,launchOptions:{args:['--use-angle=swiftshader','--enable-webgl','--ignore-gpu-blocklist']},trace:'retain-on-failure'},webServer:{command:'npm run dev -- --port 5173',url:'http://127.0.0.1:5173',reuseExistingServer:true}});
