@@ -27,11 +27,12 @@
 .map-panel .direction-label{display:flex;align-items:center;gap:12px;margin:12px 0}
 .place-list{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:9px;margin:12px 0 20px}
 .place-list button{display:grid;grid-template-columns:30px 1fr;grid-template-rows:auto auto auto;text-align:left;gap:2px 8px;align-items:center;background:#edf3e9;color:#1d4537;border:1px solid #b6c9b6;border-radius:12px;padding:10px;cursor:pointer;min-height:84px}
-#leave-practice{position:absolute;top:99px;right:28px;z-index:3;background:#fffdf4ed;border-color:#c7d6c6;box-shadow:0 5px 18px #254d3b14}
+#practice-actions{position:absolute;top:99px;right:28px;z-index:3;display:flex;gap:8px}
+#practice-actions button{background:#fffdf4f2;border-color:#c7d6c6;box-shadow:0 5px 18px #254d3b14}
 .place-list button:hover,.place-list button:focus-visible{background:#dcebd9;border-color:#5d9b71}
 .place-list button span{grid-row:1/4;font-size:22px}.place-list button b{font-size:14px}.place-list button small{font-size:11px}.place-list button em{font-style:normal;font-size:10px;color:#5b735f}
 @media(max-width:600px){#explore-hud{top:95px;left:10px;width:min(235px,calc(100vw - 20px));padding:12px}#explore-hud h1{font-size:16px}#explore-hud p{font-size:11px}.map-panel{padding:18px}.place-list{grid-template-columns:1fr;gap:6px}.place-list button{min-height:64px;padding:7px 10px;grid-template-rows:auto auto}.place-list button span{grid-row:1/3}.place-list button em{display:none}.welcome{padding:24px}}
-@media(max-width:600px){#leave-practice{top:76px;right:12px;padding:8px 10px;font-size:12px}}
+@media(max-width:600px){#practice-actions{top:76px;right:12px;gap:5px}#practice-actions button{padding:7px 8px;font-size:11px;min-height:40px}}
 .dialog-close{position:absolute;top:10px;right:10px;z-index:4;display:grid;place-items:center;width:42px;height:42px;min-height:42px;padding:0;border:0;border-radius:50%;background:#e8eee3;color:#21463c;font-size:25px;line-height:1}
 dialog>h2{padding-right:34px}.guide-panel{width:min(570px,calc(100vw - 24px));overflow:hidden}.guide-scroll{max-height:min(54dvh,500px);overflow-y:auto;overscroll-behavior:contain;padding:0 8px 6px 0}.guide-scroll h3{font-size:16px;margin:18px 0 4px}.guide-scroll p{margin:0 0 10px}.guide-panel>.primary,.pause-panel>.primary{width:100%;margin-top:18px}
 #hud .chapter>div{min-width:0;flex:1}#hud-toggle{pointer-events:auto;flex:none;padding:5px 8px;min-height:34px;font-size:11px;background:#fffdf4e8}#hud.compact .chapter{margin-bottom:7px}#hud.compact .task-card{padding:10px 14px}#hud.compact .progress,#hud.compact #tip,#hud.compact .evidence-row,#hud.compact #world-caption{display:none}#hud.compact .task-card h2{font-size:15px;line-height:1.35;margin:5px 0 0}

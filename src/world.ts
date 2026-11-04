@@ -8,7 +8,7 @@ const palette={grass:0x9bcba8,path:0xe5dcc7,road:0x536575,cream:0xfff2d3,green:0
 export class World {
   scene=new THREE.Scene();camera=new THREE.PerspectiveCamera(43,1,.1,300);renderer:THREE.WebGLRenderer;
   root=new THREE.Group();avatar=new THREE.Group();vehicle=new THREE.Group();leadScooter=new THREE.Group();gate=new THREE.Group();marker=new THREE.Group();trafficCar=new THREE.Group();sideTrafficCar=new THREE.Group();passenger=new THREE.Group();improvement=new THREE.Group();exploreMarkers=new THREE.Group();landmarkVehicles=new THREE.Group();transportCabin=new THREE.Group();scooterCabin=new THREE.Group();parentCabin=new THREE.Group();
-  greenLamp!:THREE.Mesh;redLamp!:THREE.Mesh;guardArm!:THREE.Mesh;belt!:THREE.Mesh;parentBelt!:THREE.Mesh;helmet!:THREE.Mesh;
+  greenLamp!:THREE.Mesh;redLamp!:THREE.Mesh;guardArm!:THREE.Mesh;belt!:THREE.Mesh;parentBelt!:THREE.Mesh;helmet!:THREE.Mesh;stationRoof!:THREE.Mesh;
   sideGreenLamp!:THREE.Mesh;sideRedLamp!:THREE.Mesh;sideGuardArm!:THREE.Mesh;
   private pedestrianFigures:THREE.Group[]=[];private pedestrianFigureMaterial=this.mat(0x315f4e);private vehicleSignals:{red:THREE.Mesh;amber:THREE.Mesh;green:THREE.Mesh}[]=[];
   yaw=.3;distance=25;overview=false;reduced=false;low=false;private focus=new THREE.Vector3(-3,0,-2);private ray=new THREE.Raycaster();private clock=0;private lastMode='';private objects:THREE.Object3D[]=[];private readonly labels=new Set<THREE.Sprite>();private readonly labelPosition=new THREE.Vector3();private readonly mapFog=new THREE.Fog(0xe4f0ec,75,225);
@@ -208,7 +208,13 @@ export class World {
   buildStation(){
     this.box(16,.4,26,0xd7dfda,55,-.3,3);this.box(5,.15,26,0x576674,64,-.08,3);this.box(.18,.02,23,palette.yellow,60.6,.04,3);
     for(const x of [49,60])for(const z of [-9,15])this.box(.3,4,.3,palette.green,x,2,z);
-    this.box(13,.25,4,palette.green,54.5,4.2,-6);this.box(8,3.6,6,0xe2e5d6,52,1.8,8);this.box(9,.28,7,0x4d876d,52,3.75,8);this.label('捷運站入口・示意',52,4.2,10,4.5);this.box(1.4,1.3,.35,0x477b72,55,1,7).userData.action='card';this.label('刷卡閘門',55,2.2,7,2.5);
+    this.box(13,.25,4,palette.green,54.5,4.2,-6);
+    // Keep the station open toward the player: a solid building hid the child and fare gate.
+    for(const x of [48.2,55.8])this.box(.3,3.5,.3,palette.green,x,1.75,5.2);
+    this.stationRoof=this.box(9,.28,7,0x4d876d,52,3.75,8);
+    const stationRoofMaterial=this.stationRoof.material as THREE.MeshStandardMaterial;
+    stationRoofMaterial.transparent=true;stationRoofMaterial.opacity=.32;stationRoofMaterial.depthWrite=false;
+    this.label('捷運站入口・示意',52,4.2,10,4.5);this.box(1.4,1.3,.35,0x477b72,55,1,7).userData.action='card';this.label('刷卡閘門',55,2.2,7,2.5);
     this.box(7,.2,7,0xbfcbbd,56,.1,4);this.label('A8 方向普通車',55,3.2,-5,6);this.label('月台方向為教學示意',55,2.3,-5,6);this.label('先下後上',58,2,3,3);
     for(let z=2;z<6;z+=1)this.box(1,.02,.15,palette.yellow,59,.04,z);
     const officer=this.person(palette.mint);officer.position.set(57,0,3);this.root.add(officer);this.label('站務協助',57,2.3,3,2.5);
@@ -240,6 +246,8 @@ export class World {
   pick(clientX:number,clientY:number):{action?:string;correctSeat?:boolean;target?:boolean;vehicle?:boolean}{const rect=this.renderer.domElement.getBoundingClientRect();this.ray.setFromCamera(new THREE.Vector2((clientX-rect.left)/rect.width*2-1,-(clientY-rect.top)/rect.height*2+1),this.camera);const hits=this.ray.intersectObjects(this.scene.children,true);for(const hit of hits){let obj:THREE.Object3D|null=hit.object;while(obj){if(obj.userData.action||obj.userData.target||obj.userData.vehicle)return obj.userData;obj=obj.parent;}if(hit.object instanceof THREE.Mesh)break;}return {};}
   render(j:Journey|undefined,dt:number,explore?:Point,exploreTarget?:Point){
     this.clock+=dt;
+    const playerPosition=j?.position??explore;
+    this.stationRoof.visible=!(playerPosition&&playerPosition.x>47&&playerPosition.x<57&&playerPosition.z>4.5&&playerPosition.z<12);
     if(!this.low&&Math.floor(this.clock)!==Math.floor(this.clock-dt))this.renderer.shadowMap.needsUpdate=true;
     this.exploreMarkers.visible=!j;
     this.landmarkVehicles.visible=!j;
@@ -272,7 +280,7 @@ export class World {
       if(j.scenario.id==='walk_side'&&j.index<3&&j.position.x< -40)desired.set(-36,0,-16);
       if(j.inside)desired.set(scooterInside?(lead?(this.avatar.position.x+this.leadScooter.position.x)/2:this.avatar.position.x):j.scenario.mode==='parent'?130:110,0,scooterInside?(lead?(this.avatar.position.z+this.leadScooter.position.z)/2:this.avatar.position.z):0);
       if(j.position.x>70&&!j.inside)desired.set(81,0,-1);
-      if(j.scenario.mode==='mrt'&&j.position.x>45&&j.position.x<70)desired.set(55,0,3);
+      if(j.scenario.mode==='mrt'&&j.position.x>45&&j.position.x<70)desired.set(j.position.x,0,j.position.z);
       // Camera follows a scene transition immediately, rather than flying across unrelated scenes.
       this.focus.lerp(desired,this.reduced||modeChanged||this.focus.distanceTo(desired)>18?1:Math.min(dt*4,1));
     }else if(explore){

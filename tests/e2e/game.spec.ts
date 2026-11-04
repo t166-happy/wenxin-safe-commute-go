@@ -82,6 +82,44 @@ for(const size of sizes){test(`leave current practice from map and safety feedba
   await expect(page.locator('#leave-feedback')).toBeVisible();await page.locator('#leave-feedback').click();await expect(page.locator('#feedback')).toBeHidden();await expect(page.locator('#app')).toHaveAttribute('data-stage','explore');
   expect(Number(await page.locator('#app').getAttribute('data-z'))).toBeCloseTo(-9,1);
 });}
+test('every practice can restart and leave without losing its safe starting point',async({page})=>{
+  test.setTimeout(360000);
+  for(const scene of ['walk','walk_side','guard','after_school_shuttle_courtyard','school_bus_gate_exterior','mrt','bus','parent','parent_east','scooter_main','scooter_side','transfer','human']){
+    await start(page,scene);
+    const firstStage=await stage(page);const firstX=await page.locator('#app').getAttribute('data-x');const firstZ=await page.locator('#app').getAttribute('data-z');
+    await expect(page.locator('#restart-practice'),scene).toBeVisible();await expect(page.locator('#leave-practice'),scene).toBeVisible();
+    await page.locator('#restart-practice').click();await expect(page.locator('#app')).toHaveAttribute('data-stage',firstStage!);
+    await expect(page.locator('#app')).toHaveAttribute('data-x',firstX!);await expect(page.locator('#app')).toHaveAttribute('data-z',firstZ!);
+    await page.locator('#leave-practice').click();await expect(page.locator('#app')).toHaveAttribute('data-stage','explore');
+    await expect(page.locator('#practice-actions')).toBeHidden();
+  }
+});
+test('pause and safety feedback offer both restart and exit',async({page})=>{
+  await start(page,'after_school_shuttle_courtyard');
+  await page.locator('#pause').click();await expect(page.locator('#restart-paused')).toBeVisible();await expect(page.locator('#leave-paused')).toBeVisible();
+  await page.locator('#restart-paused').click();await expect(page.locator('#pause-panel')).toBeHidden();await expect(page.locator('#app')).toHaveAttribute('data-stage','assembly');
+  await page.keyboard.down('ArrowLeft');await expect(page.locator('#feedback')).toBeVisible({timeout:8000});await page.keyboard.up('ArrowLeft');
+  await expect(page.locator('#restart-feedback')).toBeVisible();await page.locator('#restart-feedback').click();await expect(page.locator('#feedback')).toBeHidden();
+  await expect(page.locator('#app')).toHaveAttribute('data-stage','assembly');expect(Number(await page.locator('#app').getAttribute('data-x'))).toBeCloseTo(5,1);
+  await page.locator('#pause').click();await page.locator('#leave-paused').click();await expect(page.locator('#app')).toHaveAttribute('data-stage','explore');
+});
+test('MRT entrance remains visible while the player walks inside the open station',async({page})=>{
+  await page.setViewportSize({width:1366,height:768});await start(page,'mrt');
+  await moveAndAct(page);await expect(page.locator('#app')).toHaveAttribute('data-stage','station');
+  await page.locator('#assist').click();await expect(page.locator('#assist')).toHaveText('◎ 前往標記',{timeout:40000});
+  mkdirSync('docs/screenshots',{recursive:true});await page.screenshot({path:'docs/screenshots/mrt-open-station-1366.png'});
+  for(let i=0;i<6&&await stage(page)!=='board';i++)await moveAndAct(page);
+  await expect(page.locator('#app')).toHaveAttribute('data-stage','board');
+  await page.locator('#assist').click();await expect(page.locator('#assist')).toHaveText('◎ 前往標記',{timeout:40000});
+  await page.screenshot({path:'docs/screenshots/mrt-platform-1366.png'});
+  await page.locator('#interact').click();await expect(page.locator('#app')).toHaveAttribute('data-stage','rail');
+  await page.screenshot({path:'docs/screenshots/mrt-cabin-1366.png'});
+  await page.setViewportSize({width:390,height:844});await expect(page.locator('#restart-practice')).toBeVisible();
+  await expect(page.locator('#leave-practice')).toBeVisible();await page.screenshot({path:'docs/screenshots/mrt-cabin-390.png'});
+  expect(await page.evaluate(()=>document.documentElement.scrollWidth>innerWidth)).toBe(false);
+  await page.locator('#restart-practice').click();await expect(page.locator('#app')).toHaveAttribute('data-stage','assembly');
+  await page.locator('#leave-practice').click();await expect(page.locator('#app')).toHaveAttribute('data-stage','explore');
+});
 test('keyboard movement, chain collision, demo, retry, teacher export',async({page})=>{
   await start(page,'after_school_shuttle_courtyard');
   // Begin on the tree-side pedestrian path; crossing left into the cone line must fail.
