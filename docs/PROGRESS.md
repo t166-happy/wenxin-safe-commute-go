@@ -59,4 +59,4 @@
 
 操作及模組界線見 README.md；實測見 TEST_REPORT.md。遊戲執行時未連接第三方資料 API；原始碼與靜態遊戲依使用者要求發布到 GitHub／GitHub Pages。
 
-2026-11-04 GitHub 發布準備：建立 `main` 推送與 GitHub Pages 自動部署流程。公開檔案清單已核對，`picture/`、兩張根目錄 HEIC、建置產物、測試快取及 `node_modules/` 均排除；原創 GLB 與純遊戲截圖納入。發布前本機 lint、typecheck、378 項單元測試、build 通過。GitHub Actions 遠端結果與實際遊戲網址以部署完成後狀態為準。
+2026-11-04 GitHub 發布：已推送 `main` 並啟用 GitHub Pages 自動部署。公開檔案清單已核對，`picture/`、兩張根目錄 HEIC、建置產物、測試快取及 `node_modules/` 均排除；原創 GLB 與純遊戲截圖納入。本機 lint、typecheck、378 項單元測試、build 通過；首輪 GitHub Actions 建置與部署成功、遠端 378 項測試通過。線上 `https://t166-happy.github.io/wenxin-safe-commute-go/` 已實際開啟 3D 大地圖，首頁、模型與離線腳本皆回應 200。此為公開教學示意版，實機與現地驗收仍待完成。

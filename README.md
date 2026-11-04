@@ -68,7 +68,7 @@ build 自動產生靜態資源清單與 Service Worker。preview 首次下載並
 
 - 原始碼與開發說明：https://github.com/t166-happy/wenxin-safe-commute-go
 - 網頁遊戲：https://t166-happy.github.io/wenxin-safe-commute-go/
-- 推送至 `main` 後，GitHub Actions 會安裝依賴、執行 lint、型別檢查、單元測試及正式建置，再部署 GitHub Pages。首次使用需在儲存庫 Settings → Pages 將來源設為 GitHub Actions。
+- 推送至 `main` 後，GitHub Actions 會安裝依賴、執行 lint、型別檢查、單元測試及正式建置，再部署 GitHub Pages；儲存庫的 Pages 來源已設為 GitHub Actions。
 - 公開版本是交通安全**教學示意**，不是現地停靠、號誌或動線指引。`picture/`、根目錄 HEIC 照片及本機產物不納入 Git；未取得學生影像公開授權。
 
 2026-11-04 本輪安裝依賴無弱點，lint、typecheck、350 項單元測試、正式 build、離線重載與三尺寸正式預覽已通過。完整 26 項瀏覽器測試初跑 25 項通過；正門機車下車後輔助步行改為繞行停靠區，該完整流程與三尺寸地圖定向重跑 4/4 通過，正式版離線與預覽 3/3 通過。詳見 `docs/TEST_REPORT.md`。實機 iOS／Android、黃線停靠規則及側門現地點位仍待驗收。
