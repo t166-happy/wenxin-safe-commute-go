@@ -86,11 +86,13 @@ export class Journey {
   get inside(){return this.position.x>105&&this.position.x<115||this.scenario.mode==='scooter'&&this.position.x>117&&this.position.x<123||this.scenario.mode==='parent'&&this.position.x>127&&this.position.x<133;}
   get vehiclePosition(){
     const stop=this.scenario.stop;if(!stop)return undefined;
-    if(this.departAt!==null){const progress=Math.min((this.elapsed-this.departAt)/3,1);if(progress>=1)return undefined;return this.scenario.id==='scooter_side'?{x:stop.x,z:stop.z-progress*10}:{x:stop.x+progress*(stop.x<0?-12:12),z:stop.z};}
-    if(this.scenario.mode==='parent')return {x:stop.x+(1-this.vehicleProgress)*(stop.x<0?-12:12),z:stop.z};
-    if(this.scenario.id==='scooter_main')return {x:stop.x-(1-this.vehicleProgress)*8,z:stop.z};
-    if(this.scenario.id==='scooter_side')return {x:stop.x,z:stop.z-(1-this.vehicleProgress)*12};
-    return stop.z>=7?{x:stop.x+(1-this.vehicleProgress)*12,z:stop.z}:{x:stop.x,z:stop.z+(1-this.vehicleProgress)*(this.scenario.mode==='after_school_shuttle'?7:12)};
+    if(this.departAt!==null){const progress=Math.min((this.elapsed-this.departAt)/3,1);if(progress>=1)return undefined;if(this.scenario.mode==='parent')return {x:stop.x+progress*(stop.x<0?12:-12),z:stop.z};if(this.scenario.id==='scooter_main')return {x:stop.x+progress*12,z:stop.z};if(this.scenario.id==='scooter_side')return {x:stop.x,z:stop.z-progress*10};return {x:stop.x+progress*(stop.x<0?-12:12),z:stop.z};}
+    // The approach eases into a full stop; the safety gate still uses vehicleProgress === 1.
+    const remaining=(1-this.vehicleProgress)**2;
+    if(this.scenario.mode==='parent')return {x:stop.x+remaining*(stop.x<0?-12:12),z:stop.z};
+    if(this.scenario.id==='scooter_main')return {x:stop.x-remaining*8,z:stop.z};
+    if(this.scenario.id==='scooter_side')return {x:stop.x,z:stop.z-remaining*12};
+    return stop.z>=7?{x:stop.x+remaining*12,z:stop.z}:{x:stop.x,z:stop.z+remaining*(this.scenario.mode==='after_school_shuttle'?7:12)};
   }
   get gateOpen(){return this.scenario.mode==='after_school_shuttle'&&this.current?.id==='board'&&this.evaluator.evaluate('gate',this.facts).allowed;}
   get signal(){return this.elapsed%18>=6&&this.elapsed%18<15;}
@@ -177,7 +179,7 @@ export class Journey {
       const stationWalk=this.scenario.mode==='mrt'&&to.x>=47&&to.x<=62&&to.z>=-4&&to.z<=12;
       if(!(onPedestrianSpace(to)||stationWalk||onMarkedCrosswalk(to))){if(otherRoads.some(road=>intersects(this.position,to,road)))this.evaluate('vehicleLane',{safePlace:false});return false;}
       if(intersects(this.position,to,campusParkingArea)){this.evaluate('vehicleLane',{safePlace:false});return false;}
-      if(this.scenario.stop&&this.scenario.stop.z>=7&&intersects(this.position,to,{minX:this.scenario.stop.x-2,maxX:this.scenario.stop.x+2,minZ:7.1,maxZ:10.4})){
+      if(this.scenario.stop&&(this.scenario.stop.z>=7||this.scenario.mode==='parent')&&intersects(this.position,to,{minX:this.scenario.stop.x-2,maxX:this.scenario.stop.x+2,minZ:this.scenario.mode==='parent'?4.6:7.1,maxZ:this.scenario.mode==='parent'?7.35:10.4})){
         this.evaluate('vehicleLane',{safePlace:false});return false;
       }
       if(crossesVehicleGate(this.position,to)){this.evaluate('vehicleLane',{safePlace:false});return false;}

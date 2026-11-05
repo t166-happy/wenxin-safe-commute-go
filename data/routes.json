@@ -5,8 +5,8 @@
   "bus":{"label":"示意路線 01","stops":["示意公車站 A","示意公車站 B"]},
   "mrt":{"teachingSequence":["A7 體育大學","A8 長庚醫院","A9 林口"],"trainType":"普通車","officialReferenceToReview":"https://www.tymetro.com.tw/tymetro-new/tw/_pages/travel-guide/A8","exitsVerified":false},
   "school_bus":{"id":"school_bus_gate_exterior","stop":{"x":30,"z":9},"area":"exterior-east","courtyardAllowed":false},
-  "parent":{"id":"parent_main_west_illustrative","stop":{"x":-16,"z":9},"area":"main-gate-west-yellow-line-illustrative","courtyardAllowed":false},
-  "parent_east":{"id":"parent_main_east_illustrative","stop":{"x":12,"z":9},"area":"main-gate-east-yellow-line-illustrative","courtyardAllowed":false},
+  "parent":{"id":"parent_main_west_illustrative","stop":{"x":-16,"z":6},"area":"main-gate-west-yellow-line-illustrative","courtyardAllowed":false},
+  "parent_east":{"id":"parent_main_east_illustrative","stop":{"x":12,"z":6},"area":"main-gate-east-yellow-line-illustrative","courtyardAllowed":false},
   "scooter_main":{"id":"scooter_main_gate_illustrative","stop":{"x":-1,"z":6.5},"area":"main-gate-road-edge-illustrative","courtyardAllowed":false},
   "scooter_side":{"id":"scooter_side_gate_illustrative","stop":{"x":-38,"z":-14},"area":"side-gate-fuxing-north-illustrative","courtyardAllowed":false},
   "after_school_shuttle":{"id":"after_school_shuttle_courtyard","stop":{"x":-6,"z":-5},"area":"courtyard","entry":{"x":-6,"z":2},"controlledGate":{"x":1,"z":-5}}

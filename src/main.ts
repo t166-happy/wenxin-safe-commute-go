@@ -158,7 +158,7 @@ function frame(now:number){
     let dx=touch.x+(keys.has('d')||keys.has('arrowright')?1:0)-(keys.has('a')||keys.has('arrowleft')?1:0);let dz=touch.z+(keys.has('s')||keys.has('arrowdown')?1:0)-(keys.has('w')||keys.has('arrowup')?1:0);
     if(assist){const target=journey.assistedTarget;const distance=Math.hypot(target.x-journey.position.x,target.z-journey.position.z);if(distance<.12){assist=false;}else{dx=(target.x-journey.position.x)/distance;dz=(target.z-journey.position.z)/distance;}}
     const length=Math.hypot(dx,dz);journey.update(dt,length>.01);
-    if(!journey.inside){const stop=journey.vehiclePosition;const half=journey.scenario.mode==='parent'?1.9:journey.scenario.mode==='after_school_shuttle'?2.5:3.8;journey.obstacles=stop?[stop.z>=7?{minX:stop.x-half,maxX:stop.x+half,minZ:stop.z-1.35,maxZ:stop.z+1.35}:{minX:stop.x-1.35,maxX:stop.x+1.35,minZ:stop.z-half,maxZ:stop.z+half}]:[];}
+    if(!journey.inside){const stop=journey.vehiclePosition;const half=journey.scenario.mode==='parent'?1.9:journey.scenario.mode==='after_school_shuttle'?2.5:3.8;journey.obstacles=stop?[stop.z>=7||journey.scenario.mode==='parent'?{minX:stop.x-half,maxX:stop.x+half,minZ:stop.z-1.35,maxZ:stop.z+1.35}:{minX:stop.x-1.35,maxX:stop.x+1.35,minZ:stop.z-half,maxZ:stop.z+half}]:[];}
     if(length>.01){const from={...journey.position};const factor=speed*dt/Math.max(1,length);journey.move(dx*factor,dz*factor);world.face(from,journey.position);}
     const destination=journey.current;
     if(destination?.id==='destination'&&destination.action==='finish'&&journey.steps[journey.index-1]?.id==='cross'&&Math.hypot(journey.position.x-destination.target.x,journey.position.z-destination.target.z)<.45)interact('finish');

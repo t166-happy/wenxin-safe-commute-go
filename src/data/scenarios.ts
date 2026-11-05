@@ -21,7 +21,7 @@ export const scenarios:Scenario[]=[
 ];
 export function validateScenario(s:Scenario){
   if(s.mode==='school_bus'&&(!s.stop||s.stop.z<7))throw new Error('V2.4：校車只能在校門外停靠');
-  if(s.mode==='parent'&&(!s.stop||s.stop.z<7||s.stop.x< -20||s.stop.x>14||Math.abs(s.stop.x-crossingMainX)<4||Math.hypot(s.stop.x-routes.school_bus.stop.x,s.stop.z-routes.school_bus.stop.z)<10))throw new Error('汽車接送限正門兩側示意區，且不得與校車或行穿線重疊');
+  if(s.mode==='parent'&&(!s.stop||s.stop.z<5.5||s.stop.z>6.5||s.stop.x< -20||s.stop.x>14||Math.abs(s.stop.x-crossingMainX)<4||Math.hypot(s.stop.x-routes.school_bus.stop.x,s.stop.z-routes.school_bus.stop.z)<10))throw new Error('汽車接送限正門兩側路側示意區，且不得與校車、行人道或行穿線重疊');
   if(s.mode==='scooter'&&(!s.stop||s.id==='scooter_main'&&Math.hypot(s.stop.x+1,s.stop.z-6.5)>1||s.id==='scooter_side'&&Math.hypot(s.stop.x+38,s.stop.z+14)>2||[routes.parent.stop,routes.parent_east.stop].some(car=>Math.hypot(s.stop!.x-car.x,s.stop!.z-car.z)<6)))throw new Error('機車送學須設在正門車道邊或側門獨立示意點，不得與汽車臨停區混用');
   if(s.mode==='after_school_shuttle'&&(!s.stop||s.stop.x> -2||s.stop.z>=0))throw new Error('V2.4：安親班接駁車只使用核准廣場示意格位');
 }
