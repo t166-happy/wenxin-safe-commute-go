@@ -10,12 +10,12 @@ function walking(reverse=false,x:number=crossings[0].x):Step[]{
     ...(!reverse?[step('approachSide','從其他街區沿復興北路人行道走向側門','assembly','🚶 沿人行道',p(-43,-10))]:[]),
     step('stop','在復興北路路緣安全區停下','stop','✋ 停步',p(reverse?-33:-41.5,z),'approach','鬆開移動鍵，停在路緣的金色圓圈。'),
     step('left','看看左方來車','left','👀 看左方',p(reverse?-33:-41.5,z)),step('right','看看右方與轉彎車','right','👀 看右方',p(reverse?-33:-41.5,z)),
-    step('wait','確認綠燈、停讓與導護','wait','🚦 確認安全',p(reverse?-33:-41.5,z),'cross'),
+    step('wait','確認行人號誌燈號','wait','🚦 確認行人號誌燈號',p(reverse?-33:-41.5,z),'cross','看行人號誌是否亮起小綠人；確認車輛停讓後再按互動。'),
     step('cross','沿復興北路斑馬線走到對面','cross','🚶 完成穿越',p(reverse?-42:-35,z),'cross'),
     step('destination',reverse?'安全抵達復興北路示意街區':'沿側門步道進入校園','finish','🏁 抵達',p(reverse?-43:-27,reverse?-18:z))
   ];}
   const edge=reverse?.6:8.7,end=reverse?8.7:.6;
-  return [step('stop','在路口安全區停下','stop','✋ 停步',p(x,edge),'approach','鬆開移動鍵，停在路緣的金色圓圈。'),step('left','看看左方來車','left','👀 看左方',p(x,edge)),step('right','看看右方與轉彎車','right','👀 看右方',p(x,edge)),step('wait','確認綠燈、停讓與導護','wait','🚦 確認安全',p(x,edge),'cross'),step('cross','沿斑馬線走到對面','cross','🚶 完成穿越',p(x,end),'cross'),step('destination',reverse?'安全抵達示意街角':'沿左側步道進入校門','finish','🏁 抵達',p(x,reverse?12:-10))];
+  return [step('stop','在路口安全區停下','stop','✋ 停步',p(x,edge),'approach','鬆開移動鍵，停在路緣的金色圓圈。'),step('left','看看左方來車','left','👀 看左方',p(x,edge)),step('right','看看右方與轉彎車','right','👀 看右方',p(x,edge)),step('wait','確認行人號誌燈號','wait','🚦 確認行人號誌燈號',p(x,edge),'cross','看行人號誌是否亮起小綠人；確認車輛停讓後再按互動。'),step('cross','沿斑馬線走到對面','cross','🚶 完成穿越',p(x,end),'cross'),step('destination',reverse?'安全抵達示意街角':'沿左側步道進入校門','finish','🏁 抵達',p(x,reverse?12:-10))];
 }
 export function makeSteps(s:Scenario,reverse:boolean):Step[]{
   if(s.mode==='walk'||s.mode==='guard')return walking(reverse,s.id==='walk_side'?crossings[1].x:crossings[0].x);

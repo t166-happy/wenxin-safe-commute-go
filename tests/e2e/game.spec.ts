@@ -93,7 +93,13 @@ async function moveAndAct(page:Page,touch=false){
 }
 for(const scene of ['walk','walk_side'])test(`${scene} enters school directly after crossing`,async({page})=>{
   await start(page,scene);
-  let count=0;while(await stage(page)!=='cross'&&count++<7)await moveAndAct(page);
+  let count=0;while(await stage(page)!=='cross'&&count++<7){
+    if(await stage(page)==='wait'){
+      await expect(page.locator('#objective')).toHaveText('確認行人號誌燈號');
+      await expect(page.locator('#interact')).toHaveText('🚦 確認行人號誌燈號');
+    }
+    await moveAndAct(page);
+  }
   await expect(page.locator('#app')).toHaveAttribute('data-stage','cross');
   await moveAndAct(page);
   await expect(page.locator('#app')).toHaveAttribute('data-stage','destination');
@@ -106,7 +112,15 @@ for(const scene of ['walk','walk_side'])test(`${scene} enters school directly af
 for(const size of sizes){
   test(`walk and shuttle playable ${size.width}x${size.height}`,async({page})=>{
     await page.setViewportSize(size);const errors:string[]=[];page.on('pageerror',e=>errors.push(e.message));await start(page);
-    for(let i=0;i<7;i++)await moveAndAct(page);
+    for(let i=0;i<7;i++){
+      if(await stage(page)==='wait'){
+        await expect(page.locator('#interact')).toHaveText('🚦 確認行人號誌燈號');
+        const button=(await page.locator('#interact').boundingBox())!;
+        expect(button.x+button.width).toBeLessThanOrEqual(size.width);
+        expect(button.height).toBeGreaterThanOrEqual(44);
+      }
+      await moveAndAct(page);
+    }
     await expect(page.locator('#result')).toBeVisible();
     await page.locator('#choose').click();await chooseSite(page,'after_school_shuttle_courtyard');
     while(await stage(page)!=='seat')await moveAndAct(page);
