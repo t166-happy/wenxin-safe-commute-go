@@ -41,6 +41,25 @@ describe('V2.4 scene data validation',()=>{
   it('visible car approach slows before stopping while the safety gate stays closed',()=>{const car=scenarios.find(s=>s.id==='parent')!;const j=new Journey(car);const start=j.vehiclePosition!;j.update(2.5);const halfway=j.vehiclePosition!;expect(Math.abs(halfway.x-car.stop!.x)).toBeLessThan(Math.abs(start.x-car.stop!.x)/2);expect(j.facts.vehicleStopped).toBe(false);expect(j.attempt('park')).toBe(false);expect(j.blocked?.ruleId).toBe('parentPark');j.retry();j.update(2.5);expect(j.vehiclePosition).toEqual(car.stop);expect(j.facts.vehicleStopped).toBe(true);});
   it('motorcycle pickup is at separate road-side main and Fuxing North side-gate sites',()=>{const bikes=scenarios.filter(s=>s.mode==='scooter');expect(bikes.map(s=>s.id)).toEqual(['scooter_main','scooter_side']);expect(bikes[0].stop).toEqual({x:-1,z:6.5});expect(onPedestrianSpace(bikes[0].stop!)).toBe(false);expect(bikes[1].stop).toEqual({x:-38,z:-14});expect(()=>validateScenario({...bikes[0],stop:{x:-1,z:9}})).toThrow();expect(()=>validateScenario({...bikes[1],stop:{x:6,z:-5}})).toThrow();});
   it('the MRT journey requires walking to a station, entering, tapping, boarding and exiting',()=>{const mrt=scenarios.find(s=>s.mode==='mrt')!;const ids=new Journey(mrt).steps.map(s=>s.id);expect(ids.slice(0,5)).toEqual(['assembly','station','fareGate','identify','queue']);expect(ids).toContain('platform');expect(ids.indexOf('stationExit')).toBeGreaterThan(ids.indexOf('alight'));expect(ids.indexOf('walkToSchool')).toBeGreaterThan(ids.indexOf('stationExit'));});
+  it('the arriving MRT stays beside the platform and opens the boarding approach only after stopping',()=>{
+    const j=new Journey(scenarios.find(s=>s.id==='mrt')!);
+    const roadEdge=frontRoad.maxZ,trackNearEdge=17.2-3.6/2,platformEdge=15.5,carHalfWidth=2.55/2;
+    expect(trackNearEdge).toBeGreaterThan(roadEdge);
+    expect(j.vehiclePosition!.z-carHalfWidth).toBeGreaterThan(platformEdge);
+    expect(j.vehiclePosition).toEqual({x:89,z:17.2});
+    j.index=j.steps.findIndex(s=>s.id==='board');j.position={x:61,z:13.2};j.facts.correctDirection=true;
+    expect(j.move(3,2.1)).toBe(false);expect(j.blocked?.ruleId).toBe('platform');
+    j.retry();j.position={x:61,z:13.2};j.update(5);
+    expect(j.vehiclePosition).toEqual({x:64,z:17.2});expect(j.facts.vehicleStopped).toBe(true);
+    expect(j.move(3,2.1)).toBe(true);expect(j.position.x).toBe(64);expect(j.position.z).toBeCloseTo(15.3);
+    expect(Math.abs(j.position.z-(j.vehiclePosition!.z-1.32))).toBeLessThan(INTERACTION_RADIUS);
+    j.index=j.steps.findIndex(s=>s.id==='stationExit');
+    expect(j.move(-.5,-.4)).toBe(true);
+    j.index=j.steps.findIndex(s=>s.id==='walkToSchool');j.position={x:47.1,z:11};
+    expect(j.move(-.3,0)).toBe(true);
+    j.index=j.steps.findIndex(s=>s.id==='queue');j.position={x:71,z:13};
+    expect(j.move(1,0)).toBe(true);
+  });
   it('one map has all practice sites without a separate guard station and blocks shortcuts',()=>{expect(exploreSites).toHaveLength(scenarios.length);expect(exploreSites.some(site=>site.scenario.id==='guard')).toBe(false);const e=new Exploration();expect(nearbySite(e.position)?.scenario.id).toBe('walk');expect(e.move(1,0)).toBe(true);e.position={x:6,z:8};let blocked='';e.onResult=r=>{blocked=r.ruleId;};expect(e.move(0,-2)).toBe(false);expect(blocked).toBe('vehicleLane');e.position={x:3,z:-5};expect(e.move(-5,0)).toBe(false);expect(blocked).toBe('barrier');});
   it('the Fuxing North side approach begins in another block and has its own marked crossing',()=>{expect(crossings).toHaveLength(2);expect(crossings[1]).toMatchObject({x:-38,z:-8});const e=new Exploration();e.position={x:-43,z:-24};expect(nearbySite(e.position)?.scenario.id).toBe('walk_side');for(let z=-23;z<=-10;z++){expect(onPedestrianSpace({x:-43,z})).toBe(true);expect(e.move(0,1)).toBe(true);}expect(onMarkedCrosswalk({x:-38,z:-8})).toBe(true);expect(onMarkedCrosswalk({x:-38,z:4.5})).toBe(false);expect(e.move(5,0)).toBe(false);});
   it('pedestrian figures face the waiting sides while vehicle lights stand across both roads',()=>{

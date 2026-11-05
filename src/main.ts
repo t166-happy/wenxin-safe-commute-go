@@ -75,7 +75,7 @@ function interact(action=journey?.current?.action,extras:Record<string,boolean>=
   const teacherGreeting=action==='greet'&&journey.teacherNearby;
   if(journey.attempt(action,extras)){
     assist=false;if(action==='left')world.yaw=-.65;if(action==='right')world.yaw=.65;
-    if(selected.mode==='mrt'&&before?.id==='identify')world.yaw=-.55;
+    if(selected.mode==='mrt'&&before?.id==='identify')world.yaw=2.55;
     if(action==='greet'){world.avatar.rotation.y+=.5;if(teacherGreeting){world.waveTeacher(selected.id==='walk_side');toast('👋 老師／志工向你揮手回應：早安！沿步道直接入校。');}else toast('謝謝你的友善揮手！禮貌是鼓勵，安全仍要每一步確認。');}
     else if(action==='help')toast(journey.inside?'保持坐好或扶穩，向隨車成人或可用求助設備求助，不打擾駕駛。':'留在安全區，找老師或隨車人員協助；接送不符時不上陌生車。');
     else toast(`✓ ${before?.label}`);

@@ -19,6 +19,13 @@ async function press(page:Page,selector:string,touch=false){if(touch)await page.
 async function chooseSite(page:Page,scene:string,reverse=false,touch=false){await press(page,'#missions',touch);if(reverse)await page.locator('#direction').selectOption('fromSchool');await press(page,`[data-place="${scene}"]`,touch);await press(page,'#interact',touch);}
 async function start(page:Page,scene='walk',reverse=false,touch=false){await page.goto('/');await press(page,'#start',touch);if(scene!=='walk'||reverse)await chooseSite(page,scene,reverse,touch);else await press(page,'#interact',touch);await expect(page.locator('#hud')).toBeVisible();}
 async function stage(page:Page){return page.locator('#app').getAttribute('data-stage');}
+test('the former transfer map point is labeled 搭乘公車',async({page})=>{
+  await page.goto('/');await page.locator('#start').click();await page.locator('#missions').click();
+  await expect(page.locator('[data-place="transfer"]')).toContainText('搭乘公車');
+  await expect(page.locator('#map-panel')).not.toContainText('安全轉乘');
+  await page.locator('[data-place="transfer"]').click();await page.locator('#interact').click();
+  await expect(page.locator('#scene-title')).toHaveText('搭乘公車');
+});
 test('main and side crossing show a green walking figure only while cars stop',async({page})=>{
   await page.setViewportSize({width:1366,height:768});await start(page);
   await expect(page.locator('#world')).toHaveAttribute('data-pedestrian-signal','red');
@@ -279,6 +286,10 @@ test('pause and safety feedback offer both restart and exit',async({page})=>{
 });
 test('MRT entrance remains visible while the player walks inside the open station',async({page})=>{
   await page.setViewportSize({width:1366,height:768});await start(page,'mrt');
+  await expect(page.locator('#world')).toHaveAttribute('data-vehicle-z','17.20');
+  await expect(page.locator('#world')).toHaveAttribute('data-vehicle-x','64.00',{timeout:15000});
+  await expect(page.locator('#world')).toHaveAttribute('data-vehicle-brake','true');
+  mkdirSync('docs/screenshots',{recursive:true});await page.screenshot({path:'docs/screenshots/mrt-arrived-platform-1366.png'});
   await moveAndAct(page);await expect(page.locator('#app')).toHaveAttribute('data-stage','station');
   await page.locator('#assist').click();await expect(page.locator('#assist')).toHaveText('◎ 前往標記',{timeout:40000});
   mkdirSync('docs/screenshots',{recursive:true});await page.screenshot({path:'docs/screenshots/mrt-open-station-1366.png'});
@@ -286,6 +297,9 @@ test('MRT entrance remains visible while the player walks inside the open statio
   await expect(page.locator('#app')).toHaveAttribute('data-stage','board');
   await page.locator('#assist').click();await expect(page.locator('#assist')).toHaveText('◎ 前往標記',{timeout:40000});
   await page.screenshot({path:'docs/screenshots/mrt-platform-1366.png'});
+  await page.setViewportSize({width:390,height:844});await page.screenshot({path:'docs/screenshots/mrt-platform-390.png'});
+  expect(await page.evaluate(()=>document.documentElement.scrollWidth>innerWidth)).toBe(false);
+  await page.setViewportSize({width:1366,height:768});
   await page.locator('#interact').click();await expect(page.locator('#app')).toHaveAttribute('data-stage','rail');
   await page.screenshot({path:'docs/screenshots/mrt-cabin-1366.png'});
   await page.setViewportSize({width:390,height:844});await expect(page.locator('#restart-practice')).toBeVisible();

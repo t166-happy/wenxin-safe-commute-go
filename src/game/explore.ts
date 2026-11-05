@@ -15,7 +15,7 @@ const entries:Record<string,{entry:Point;area:string}>={
   parent_east:{entry:{x:10,z:11},area:'正門東側汽車接送・黃線示意區'},
   scooter_main:{entry:{x:-4,z:11},area:'正門口機車接送示意區'},
   scooter_side:{entry:{x:-33,z:-18},area:'復興北路側門機車接送示意區'},
-  transfer:{entry:{x:17,z:11},area:'轉乘示意廊道'},
+  transfer:{entry:{x:17,z:11},area:'公車乘車示意站'},
   human:{entry:{x:7,z:-8},area:'人本交通觀察點'},
 };
 export const exploreSites:ExploreSite[]=scenarios.map(scenario=>({scenario,...entries[scenario.id]}));

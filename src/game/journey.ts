@@ -48,13 +48,13 @@ export function makeSteps(s:Scenario,reverse:boolean):Step[]{
   const shuttle=s.mode==='after_school_shuttle';
   const publicTransit=['mrt','bus','transfer'].includes(s.mode);
   const mrt=s.mode==='mrt';
-  const queue=shuttle?p(2,-5):mrt?p(59,3):p((s.stop?.x??3)-2,11);
+  const queue=shuttle?p(2,-5):mrt?p(61,13.2):p((s.stop?.x??3)-2,11);
   const assembly=shuttle?p(4,-8):mrt?p(53,11):p((s.stop?.x??3)-3,11);
   const steps=[step('assembly',shuttle?'沿左側步道到集合區':mrt?'沿人行空間抵達捷運站外':'走到各自的示意安全候車區','assembly','📍 安全集合',assembly)];
-  if(mrt)steps.push(step('station','走進站體，找到通往月台的路','station','🏢 進入車站',p(53,8)),step('fareGate','在閘門刷卡後再往月台走','card','💳 刷卡進站',p(55,7)));
-  steps.push(step('identify',mrt?'確認往 A8 的普通車方向':'確認車輛識別：星星 01','identify',mrt?'🚈 確認方向':'⭐ 核對車號',mrt?p(55,6):assembly),step('queue','站在隊伍尾端，等前方同學','queue','👣 依序排隊',queue));
+  if(mrt)steps.push(step('station','走進站體，找到通往月台的路','station','🏢 進入車站',p(53,12)),step('fareGate','在閘門刷卡後再往月台走','card','💳 刷卡進站',p(55,12)));
+  steps.push(step('identify',mrt?'確認往 A8 的普通車方向':'確認車輛識別：星星 01','identify',mrt?'🚈 確認方向':'⭐ 核對車號',mrt?p(56,13):assembly),step('queue','站在隊伍尾端，等前方同學','queue','👣 依序排隊',queue));
   if(s.mode==='mrt')steps.push(step('platform','站在安全線後，先讓乘客下車','platform','🚈 先下後上',queue,'platform'));
-  steps.push(step('clearance',shuttle?'等車停妥，由成人開放指定口':'等車停穩、開門及人員引導','clearance','🧑 請成人確認',queue,'gate'),step('board','沿指定通道走到車門','board','🚪 依序上車',shuttle?p(-4,-5):mrt?p(61,3):p((s.stop?.x??3)-1,11),'board'));
+  steps.push(step('clearance',shuttle?'等車停妥，由成人開放指定口':'等車停穩、開門及人員引導','clearance','🧑 請成人確認',queue,'gate'),step('board','沿指定通道走到車門','board','🚪 依序上車',shuttle?p(-4,-5):mrt?p(64,15.3):p((s.stop?.x??3)-1,11),'board'));
   if(publicTransit){if(!mrt)steps.push(step('card','在車內感應票卡','card','💳 感應票卡',p(110,2)));steps.push(step('rail','走近扶手，站穩扶好','rail','✋ 握住扶手',p(110,0),'rail'),step('depart','準備妥當，開始乘車','depart','🚈 穩穩乘車',p(110,0),'rail'));}
   else steps.push(step('seat','依虛構座號找到 02A','seat','💺 入座 02A',p(108.5,-1),'seat'),step('buckle','將插扣拖入扣環，或點按扣合','buckle','🔒 扣好安全帶',p(108.5,-1),'buckle'),step('depart','坐定繫好，等候發車','depart','🚐 準備出發',p(108.5,-1),'depart'));
   if(s.mode==='bus'||s.mode==='transfer')steps.push(step('bell','接近示意目的站，按下車鈴','bell','🔔 按下車鈴',p(110,0)));
@@ -103,6 +103,7 @@ export class Journey {
     if(this.scenario.mode==='parent')return {x:stop.x+remaining*(stop.x<0?-12:12),z:stop.z};
     if(this.scenario.id==='scooter_main')return {x:stop.x-remaining*8,z:stop.z};
     if(this.scenario.id==='scooter_side')return {x:stop.x,z:stop.z-remaining*12};
+    if(this.scenario.mode==='mrt')return {x:stop.x+remaining*25,z:stop.z};
     return stop.z>=7?{x:stop.x+remaining*12,z:stop.z}:{x:stop.x,z:stop.z+remaining*(this.scenario.mode==='after_school_shuttle'?7:12)};
   }
   get gateOpen(){return this.scenario.mode==='after_school_shuttle'&&this.current?.id==='board'&&this.evaluator.evaluate('gate',this.facts).allowed;}
@@ -170,7 +171,7 @@ export class Journey {
     if(action==='arrival')this.facts.adultCleared=true;
     if(action==='bell')this.facts.bell=true;
     if(action==='unbuckle'){this.facts.buckled=false;this.facts.unbuckled=true;}
-    if(action==='alight')this.position=this.scenario.mode==='scooter'?(this.scenario.id==='scooter_side'?p(-33,-14):p(-5,11)):this.scenario.mode==='mrt'?p(59,3):this.scenario.mode==='after_school_shuttle'||this.reverse?p(80,2):this.scenario.mode==='parent'?p(this.scenario.stop!.x-2.4,10.8):p(1,9);
+    if(action==='alight')this.position=this.scenario.mode==='scooter'?(this.scenario.id==='scooter_side'?p(-33,-14):p(-5,11)):this.scenario.mode==='mrt'?p(64,15.3):this.scenario.mode==='after_school_shuttle'||this.reverse?p(80,2):this.scenario.mode==='parent'?p(this.scenario.stop!.x-2.4,10.8):p(1,9);
     if(action==='clearCar'){this.facts.doorClosed=true;this.facts.clearOfBlindSpot=true;this.departAt=this.elapsed;}
     if(action==='clearScooter'){this.facts.clearOfBlindSpot=true;this.departAt=this.elapsed;}
     this.index++;this.checkpoint={...this.position};this.stoppedFor=0;
@@ -186,13 +187,13 @@ export class Journey {
     }
     const to={x:this.position.x+dx,z:this.position.z+dz};
     if(this.inside){if(this.scenario.mode==='scooter'?to.x<117||to.x>123||to.z<-4||to.z>3.5:this.scenario.mode==='parent'?to.x<127||to.x>133||to.z<-4||to.z>3.5:to.x<107||to.x>113||to.z<-4||to.z>3.5)return false;}
-    else if(this.position.x>70){if(to.x<76||to.x>83||to.z<-6||to.z>5)return false;}
-    else if(this.scenario.mode==='mrt'&&this.position.x>45&&this.position.x<70&&this.position.z<7.4){
-      if(to.x<47||to.x>62||to.z< -4||to.z>12)return false;
-      if(to.x>60.2){const r=this.evaluate('platform',{correctDirection:this.facts.correctDirection,behindLine:this.current?.id==='board',doorNotClosing:this.facts.doorOpen});if(!r.allowed)return false;}
+    else if(this.position.x>70&&this.scenario.mode!=='mrt'){if(to.x<76||to.x>83||to.z<-6||to.z>5)return false;}
+    else if(this.scenario.mode==='mrt'&&this.position.x>45&&this.position.x<80&&this.position.z>8.5&&this.position.z<20){
+      if(to.x<47&&!(this.current?.id==='walkToSchool'&&onPedestrianSpace(to))||to.x>79||to.z<9||to.z>15.5)return false;
+      if(to.z>14.7&&to.z>this.position.z){const r=this.evaluate('platform',{correctDirection:this.facts.correctDirection,behindLine:this.current?.id==='board',doorNotClosing:this.facts.doorOpen});if(!r.allowed)return false;}
     }
     else {
-      const stationWalk=this.scenario.mode==='mrt'&&to.x>=47&&to.x<=62&&to.z>=-4&&to.z<=12;
+      const stationWalk=this.scenario.mode==='mrt'&&to.x>=47&&to.x<=79&&to.z>=9&&to.z<=15.5;
       if(!(onPedestrianSpace(to)||stationWalk||onMarkedCrosswalk(to))){if(otherRoads.some(road=>intersects(this.position,to,road)))this.evaluate('vehicleLane',{safePlace:false});return false;}
       if(intersects(this.position,to,campusParkingArea)){this.evaluate('vehicleLane',{safePlace:false});return false;}
       if(this.scenario.stop&&(this.scenario.stop.z>=7||this.scenario.mode==='parent')&&intersects(this.position,to,{minX:this.scenario.stop.x-2,maxX:this.scenario.stop.x+2,minZ:this.scenario.mode==='parent'?4.6:7.1,maxZ:this.scenario.mode==='parent'?7.35:10.4})){
