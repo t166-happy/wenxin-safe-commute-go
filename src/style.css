@@ -52,3 +52,40 @@ dialog>h2{padding-right:34px}.guide-panel{width:min(570px,calc(100vw - 24px));ov
 #ride-view{position:absolute;z-index:2;top:165px;right:22px;width:250px;height:158px;border:3px solid #fff7df;border-radius:16px;box-shadow:0 10px 30px #173e3370;pointer-events:none;overflow:hidden}
 #ride-view strong{position:absolute;top:5px;left:6px;right:6px;padding:3px 6px;border-radius:8px;background:#163e35dd;color:#fff8e5;font-size:11px;text-align:center}
 @media(max-width:600px){#interaction-hint{font-size:10px;padding:6px}#ride-view{top:335px;right:10px;width:162px;height:112px;border-width:2px}#ride-view strong{font-size:9px;padding:2px}}
+
+/* Keep the avatar and the center of the 3D scene free of instructional panels. */
+#hud.context-distant.compact .task-card{display:none}
+#hud.context-distant .chapter{display:inline-flex;max-width:100%;padding:6px 8px;border:1px solid #fff9;border-radius:14px;background:#fffdf4dc;box-shadow:0 5px 18px #254d3b14}
+#hud.context-distant #scene-icon{padding:6px;font-size:18px}
+#hud.context-distant .chapter h1{font-size:15px;margin-top:1px}
+#hud.context-distant .chapter small{font-size:9px}
+#hud.context-distant #hud-toggle{min-height:32px}
+#status-banner{top:158px;right:24px;left:auto;transform:none;width:max-content;max-width:min(295px,calc(100vw - 380px));padding:9px 12px;text-align:left}
+#status-banner strong{font-size:calc(13px * var(--text-scale));line-height:1.35}
+#toast{left:auto;right:24px;transform:none;bottom:130px;max-width:295px;width:max-content;padding:9px 12px;text-align:left;font-size:11px}
+#feedback[open]{position:fixed;top:154px;right:22px;bottom:auto;left:auto;margin:0;width:min(360px,calc(100vw - 44px));max-height:calc(100dvh - 174px);padding:22px;border-radius:18px}
+#feedback::backdrop{background:#173e3326;backdrop-filter:none}
+#feedback .dialog-actions{gap:7px;margin-top:12px}
+#feedback .dialog-actions button{padding:8px 10px;font-size:12px}
+#feedback .demo-step{padding:9px;margin:6px 0;min-height:42px;font-size:12px}
+#feedback #demo-caption{min-height:0;margin:7px 0;font-size:11px}
+#greeting-reminder{top:158px;right:24px;width:260px}
+@media(max-width:1000px){#status-banner{top:155px;right:16px;max-width:min(270px,calc(100vw - 310px))}#toast{right:16px;bottom:145px;max-width:255px}}
+@media(max-width:600px){
+  #hud.context-distant .chapter{padding:4px 6px;gap:5px}
+  #hud.context-distant #scene-icon{font-size:15px}
+  #hud.context-distant .chapter h1{font-size:12px}
+  #hud.context-distant .chapter small{font-size:7px}
+  #status-banner{top:238px;right:10px;left:auto;width:max-content;max-width:174px;padding:6px 8px;border-width:1px;border-radius:9px}
+  #status-banner strong{font-size:calc(10px * var(--text-scale))}
+  #toast{right:10px;left:auto;bottom:200px;max-width:176px;padding:7px 9px;font-size:10px;line-height:1.4}
+  #greeting-reminder{top:238px;right:10px;width:174px;padding:8px;border-radius:10px}
+  #greeting-reminder strong{font-size:11px}
+  #greeting-reminder .primary{margin-top:22px;font-size:9px;min-height:36px}
+  #feedback[open]{top:auto;right:0;bottom:0;left:0;width:100vw;max-width:none;max-height:42dvh;padding:15px 16px calc(13px + env(safe-area-inset-bottom));border-radius:18px 18px 0 0}
+  #feedback h2{margin:3px 0;font-size:17px}
+  #feedback p{margin:6px 0;font-size:11px;line-height:1.45}
+  #feedback .demo-step{min-height:35px;padding:6px;font-size:10px}
+  #feedback .dialog-actions{position:sticky;bottom:0;padding:8px 0 0;margin-top:6px;background:#fffdf4}
+  #feedback .dialog-actions button{min-height:38px;padding:6px;font-size:10px}
+}

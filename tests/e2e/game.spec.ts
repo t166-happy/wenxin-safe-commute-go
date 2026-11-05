@@ -70,6 +70,42 @@ test('the guide explains gold rings and auto walk reaches one before the action'
   await page.locator('#interact').click();
   await expect(page.locator('#app')).toHaveAttribute('data-stage','left');
 });
+test('context instructions appear near the side-gate mark and safety feedback stays off the avatar',async({page})=>{
+  await page.setViewportSize({width:390,height:844});await start(page,'walk_side');
+  await expect(page.locator('#hud')).toHaveClass(/context-distant/);
+  await expect(page.locator('#hud .task-card')).toBeHidden();
+  await expect(page.locator('#interaction-hint')).toBeHidden();
+  await expect(page.locator('#status-banner')).toBeHidden();
+  await page.screenshot({path:'docs/screenshots/side-walk-distant-390.png'});
+  await page.locator('#hud-toggle').click();
+  await expect(page.locator('#hud .task-card')).toBeVisible();
+  await page.locator('#hud-toggle').click();
+  await expect(page.locator('#hud .task-card')).toBeHidden();
+  await page.locator('#assist').click();
+  await expect(page.locator('#hud .task-card')).toBeVisible({timeout:20000});
+  await expect(page.locator('#interaction-hint')).toBeVisible();
+  await page.screenshot({path:'docs/screenshots/side-walk-near-390.png'});
+  await page.locator('#interact').click();
+  await page.locator('#interact').click();
+  await expect(page.locator('#feedback')).toBeVisible({timeout:8000});
+  const feedback=await page.locator('#feedback').boundingBox();
+  expect(feedback).not.toBeNull();
+  expect(feedback!.y).toBeGreaterThan(430);
+  await page.screenshot({path:'docs/screenshots/side-walk-feedback-390.png'});
+});
+for(const size of [{width:1366,height:768},{width:768,height:1024}]){
+  test(`distant and nearby prompts stay at the edge ${size.width}x${size.height}`,async({page})=>{
+    await page.setViewportSize(size);await start(page,'walk_side');
+    await expect(page.locator('#hud .task-card')).toBeHidden();
+    await expect(page.locator('#status-banner')).toBeHidden();
+    await page.screenshot({path:`docs/screenshots/side-walk-distant-${size.width}.png`});
+    await page.locator('#assist').click();
+    await expect(page.locator('#hud .task-card')).toBeVisible({timeout:20000});
+    await page.screenshot({path:`docs/screenshots/side-walk-near-${size.width}.png`});
+    const card=await page.locator('#hud .task-card').boundingBox();
+    expect(card!.x+card!.width).toBeLessThan(size.width/2);
+  });
+}
 test('3D wheels rotate with road traffic and scooters, then stop with brake lights',async({page})=>{
   await page.setViewportSize({width:1366,height:768});await page.goto('/');await page.locator('#start').click();
   const world=page.locator('#world');
