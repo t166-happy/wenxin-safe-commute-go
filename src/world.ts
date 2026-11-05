@@ -9,6 +9,7 @@ const palette={grass:0x9bcba8,path:0xe5dcc7,road:0x536575,cream:0xfff2d3,green:0
 interface GuideActor {crossing:CrossingGuideId;role:CrossingGuideRole;group:THREE.Group;arm:THREE.Mesh;legs:THREE.Mesh[];route:GuideRoute}
 export class World {
   scene=new THREE.Scene();camera=new THREE.PerspectiveCamera(43,1,.1,300);renderer:THREE.WebGLRenderer;
+  private rideScene=new THREE.Scene();private rideCamera=new THREE.PerspectiveCamera(46,1,.1,80);private rideVehicle=new THREE.Group();private rideRoad=new THREE.Group();private rideTrack=new THREE.Group();private rideMode='';private rideDistance=0;private rideLines:THREE.Mesh[]=[];private rideSleepers:THREE.Mesh[]=[];
   root=new THREE.Group();avatar=new THREE.Group();vehicle=new THREE.Group();leadScooter=new THREE.Group();gate=new THREE.Group();marker=new THREE.Group();trafficCar=new THREE.Group();sideTrafficCar=new THREE.Group();passenger=new THREE.Group();improvement=new THREE.Group();exploreMarkers=new THREE.Group();landmarkVehicles=new THREE.Group();transportCabin=new THREE.Group();scooterCabin=new THREE.Group();parentCabin=new THREE.Group();
   belt!:THREE.Mesh;parentBelt!:THREE.Mesh;helmet!:THREE.Mesh;stationRoof!:THREE.Mesh;
   private pedestrianSignals:{red:THREE.Group;green:THREE.Group}[]=[];private vehicleSignals:{red:THREE.Mesh;amber:THREE.Mesh;green:THREE.Mesh}[]=[];
@@ -18,7 +19,7 @@ export class World {
     this.renderer=new THREE.WebGLRenderer({antialias:true,alpha:false,powerPreference:'high-performance'});this.renderer.setPixelRatio(Math.min(devicePixelRatio,1.7));this.renderer.shadowMap.enabled=true;this.renderer.shadowMap.type=THREE.PCFShadowMap;this.renderer.outputColorSpace=THREE.SRGBColorSpace;container.append(this.renderer.domElement);this.renderer.domElement.setAttribute('aria-label','可移動角色的 3D 文欣校門教學示意場景');
     const sky=new THREE.HemisphereLight(0xfff5e5,0x84a89d,2);this.scene.add(sky);const sun=new THREE.DirectionalLight(0xfff0d7,2.4);sun.position.set(-15,30,15);sun.castShadow=true;sun.shadow.mapSize.set(1024,1024);sun.shadow.camera.left=-35;sun.shadow.camera.right=95;sun.shadow.camera.top=35;sun.shadow.camera.bottom=-35;sun.shadow.normalBias=.04;this.scene.add(sun);
     this.renderer.shadowMap.autoUpdate=false;this.renderer.shadowMap.needsUpdate=true;
-    this.scene.add(this.root);this.buildCampus();this.buildRoadDetails();this.loadStreetFurniture();this.buildCabin();this.buildStation();this.buildDestination();this.buildExploreMarkers();this.buildLandmarkVehicles();this.leadScooter=this.makeVehicle('scooter');this.leadScooter.traverse(o=>{if(o instanceof THREE.Mesh&&o.material instanceof THREE.MeshStandardMaterial&&o.material.color.getHex()===0x55a7a0)o.material.color.setHex(0xef8f71);});this.label('前車先駛離',0,3.25,0,3.1,this.leadScooter,'#ffe9d8','#7d3a2e');this.leadScooter.visible=false;this.root.add(this.leadScooter);this.avatar=this.person(0x408cad);this.helmet=this.ball(.36,0xf3c55e,0,1.78,0,this.avatar);this.helmet.visible=false;this.root.add(this.avatar);this.buildMarker();this.scene.add(this.marker);this.resize();new ResizeObserver(()=>this.resize()).observe(container);
+    this.scene.add(this.root);this.buildCampus();this.buildRoadDetails();this.loadStreetFurniture();this.buildCabin();this.buildStation();this.buildDestination();this.buildExploreMarkers();this.buildLandmarkVehicles();this.buildRideView();this.leadScooter=this.makeVehicle('scooter');this.leadScooter.traverse(o=>{if(o instanceof THREE.Mesh&&o.material instanceof THREE.MeshStandardMaterial&&o.material.color.getHex()===0x55a7a0)o.material.color.setHex(0xef8f71);});this.label('前車先駛離',0,3.25,0,3.1,this.leadScooter,'#ffe9d8','#7d3a2e');this.leadScooter.visible=false;this.root.add(this.leadScooter);this.avatar=this.person(0x408cad);this.helmet=this.ball(.36,0xf3c55e,0,1.78,0,this.avatar);this.helmet.visible=false;this.root.add(this.avatar);this.buildMarker();this.scene.add(this.marker);this.resize();new ResizeObserver(()=>this.resize()).observe(container);
   }
   mat(color:number){return new THREE.MeshStandardMaterial({color,roughness:.84,metalness:0});}
   box(w:number,h:number,d:number,color:number,x:number,y:number,z:number,parent:THREE.Object3D=this.root){const mesh=new THREE.Mesh(new THREE.BoxGeometry(w,h,d),this.mat(color));mesh.position.set(x,y,z);mesh.castShadow=true;mesh.receiveShadow=true;parent.add(mesh);return mesh;}
@@ -217,17 +218,56 @@ export class World {
   buildLandmarkVehicles(){this.root.add(this.landmarkVehicles);for(const [kind,x,z] of [['school_bus',30,9],['parent',-16,6],['parent',12,6],['scooter',-1,6.5],['scooter',-38,-14],['after_school_shuttle',-6,-5],['mrt',64,3]] as const){const vehicle=this.makeVehicle(kind);vehicle.position.set(x,0,z);if(kind!=='mrt'&&(z>=7||kind==='parent'||kind==='scooter'&&x===-1))vehicle.rotation.y=x>=0?-Math.PI/2:Math.PI/2;this.landmarkVehicles.add(vehicle);}}
   cone(x:number,z:number){this.box(.58,.1,.58,0xf37f44,x,.1,z);const cone=new THREE.Mesh(new THREE.ConeGeometry(.23,.75,8),this.mat(0xf4874c));cone.position.set(x,.5,z);cone.castShadow=true;this.root.add(cone);this.box(.24,.13,.24,0xfff9e6,x,.54,z);}
   chain(start:number,end:number){for(let z=start;z<end;z+=.15){const mesh=new THREE.Mesh(new THREE.TorusGeometry(.1,.022,4,7),this.mat(0xf2d56e));mesh.rotation.y=Math.PI/2;mesh.rotation.x=Math.round(z/.15)%2?Math.PI/3:0;mesh.position.set(1,.95,z);this.root.add(mesh);}}
-  makeTrain(){const g=new THREE.Group();for(const offset of [-8,0,8]){const car=new THREE.Group();this.box(2.55,2.35,7.45,0xb4a0ca,0,1.47,0,car);this.box(2.55,.25,7.45,0x775e9b,0,2.75,0,car);for(const z of [-2.6,-1.5,1.45,2.55])for(const x of [-1.3,1.3])this.box(.04,.85,.8,0x83bfcc,x,2,z,car);this.box(.07,1.85,1.25,0xe8e3d0,-1.32,1.45,.1,car).userData.action='board';for(const z of [-2.4,2.4]){this.box(.4,.48,.65,0x34454e,0,.38,z,car);for(const x of [-1.16,1.16])this.wheel(.27,.14,x,.33,z,car,Math.sign(x));}car.position.z=offset;g.add(car);const wheels=(g.userData.wheels??=[]) as THREE.Group[];wheels.push(...(car.userData.wheels as THREE.Group[]));}this.label('普通車・3 節車廂・示意',0,3.4,0,5,g);g.traverse(o=>{o.userData.vehicle=true;});return g;}
-  makeVehicle(kind:string){if(kind==='mrt')return this.makeTrain();const g=new THREE.Group();if(kind==='scooter'){
+  makeTrain(showLabel=true){const g=new THREE.Group();for(const offset of [-8,0,8]){const car=new THREE.Group();this.box(2.55,2.35,7.45,0xb4a0ca,0,1.47,0,car);this.box(2.55,.25,7.45,0x775e9b,0,2.75,0,car);for(const z of [-2.6,-1.5,1.45,2.55])for(const x of [-1.3,1.3])this.box(.04,.85,.8,0x83bfcc,x,2,z,car);this.box(.07,1.85,1.25,0xe8e3d0,-1.32,1.45,.1,car).userData.action='board';for(const z of [-2.4,2.4]){this.box(.4,.48,.65,0x34454e,0,.38,z,car);for(const x of [-1.23,1.23])this.wheel(.34,.2,x,.39,z,car,Math.sign(x));}car.position.z=offset;g.add(car);const wheels=(g.userData.wheels??=[]) as THREE.Group[];wheels.push(...(car.userData.wheels as THREE.Group[]));}if(showLabel)this.label('普通車・3 節車廂・示意',0,3.4,0,5,g);g.traverse(o=>{o.userData.vehicle=true;});return g;}
+  makeVehicle(kind:string,showLabel=true){if(kind==='mrt')return this.makeTrain(showLabel);const g=new THREE.Group();if(kind==='scooter'){
       for(const z of [-1.05,1.05])this.wheel(.42,.22,0,.43,z,g);
-      this.box(.72,.42,1.9,0x55a7a0,0,.66,0,g);this.box(.65,.22,.85,0x284c50,0,1,-.45,g);this.box(.12,1.05,.12,0x4e6264,0,1.1,.9,g);this.box(1.15,.12,.14,0x4e6264,0,1.6,.9,g);this.box(.55,.9,.12,0xe3e7dd,0,1.05,1.06,g);g.userData.brakeLights=[this.box(.45,.18,.08,0xc9493c,0,.91,-1.04,g)];const rider=this.person(0x547c91);rider.scale.setScalar(.62);rider.position.set(0,.62,.45);g.add(rider);this.label('機車接送・示意',0,2.5,0,3,g);g.traverse(o=>{o.userData.vehicle=true;});return g;
+      this.box(.72,.42,1.9,0x55a7a0,0,.66,0,g);this.box(.65,.22,.85,0x284c50,0,1,-.45,g);this.box(.12,1.05,.12,0x4e6264,0,1.1,.9,g);this.box(1.15,.12,.14,0x4e6264,0,1.6,.9,g);this.box(.55,.9,.12,0xe3e7dd,0,1.05,1.06,g);g.userData.brakeLights=[this.box(.45,.18,.08,0xc9493c,0,.91,-1.04,g)];const rider=this.person(0x547c91);rider.scale.setScalar(.62);rider.position.set(0,.62,.45);g.add(rider);if(showLabel)this.label('機車接送・示意',0,2.5,0,3,g);g.traverse(o=>{o.userData.vehicle=true;});return g;
     }const isCar=kind==='car'||kind==='parent',isShuttle=kind==='after_school_shuttle';const length=isCar?3.5:isShuttle?4.8:7.5;const color=isCar?palette.coral:kind==='school_bus'?palette.yellow:palette.mint;
     this.box(2.5,isCar?1.1:1.8,length,color,0,isCar?.9:1.4,0,g);this.box(2.4,isCar?.9:1,length*.73,0xf7f3de,0,isCar?1.7:2.6,-.2,g);this.box(2.43,.65,length*.64,0x85bdc9,0,isCar?1.7:2.65,-.2,g);this.box(2.5,.18,length*.79,color,0,isCar?2.2:3.2,-.2,g);
-    for(const x of [-1.23,1.23])for(const z of [-length*.3,length*.3])this.wheel(.43,.22,x,.5,z,g,Math.sign(x));
+    for(const x of [-1.3,1.3])for(const z of [-length*.3,length*.3])this.wheel(.52,.25,x,.52,z,g,Math.sign(x));
     g.userData.brakeLights=[-1,1].map(side=>this.box(.38,.19,.08,0xc74739,side*.88,1.08,-length/2-.05,g));
     if(kind==='parent')for(const [x,z,shirt] of [[-.58,-.35,0x547c91],[.58,.65,0x5b7f83]] as const){const rider=this.person(shirt);rider.scale.setScalar(.48);rider.position.set(x,.9,z);g.add(rider);}
-    this.box(.08,1.8,1,0x244e50,-1.3,1.45,1,g).userData.action='board';this.label(isCar?'短暫停靠・示意':kind==='school_bus'?'校車 01・校門外':isShuttle?'★ 01 安親班':'示意路線 01',0,3.7,0,4,g);
+    this.box(.08,1.8,1,0x244e50,-1.3,1.45,1,g).userData.action='board';if(showLabel)this.label(isCar?'短暫停靠・示意':kind==='school_bus'?'校車 01・校門外':isShuttle?'★ 01 安親班':'示意路線 01',0,3.7,0,4,g);
     g.traverse(o=>{o.userData.vehicle=true;});return g;
+  }
+  private buildRideView(){
+    this.rideScene.background=new THREE.Color(0xcbe8dc);
+    this.rideScene.add(new THREE.AmbientLight(0xffffff,2));
+    const sun=new THREE.DirectionalLight(0xffffff,2.3);sun.position.set(6,10,7);this.rideScene.add(sun);
+    this.rideScene.add(this.rideRoad,this.rideTrack);
+    this.box(12,.12,42,0x586c76,0,-.11,0,this.rideRoad);
+    for(const x of [-5.8,5.8])this.box(.15,.02,42,0xf5e9c5,x,-.03,0,this.rideRoad);
+    for(const z of [-15,-9,-3,3,9,15])for(const x of [-3.5,3.5]){const line=this.box(.12,.025,2.3,0xffefd1,x,-.025,z,this.rideRoad);line.userData.baseZ=z;this.rideLines.push(line);}
+    this.box(5.2,.14,42,0x879087,0,-.14,0,this.rideTrack);
+    for(const z of [-18,-16.5,-15,-13.5,-12,-10.5,-9,-7.5,-6,-4.5,-3,-1.5,0,1.5,3,4.5,6,7.5,9,10.5,12,13.5,15,16.5,18]){const sleeper=this.box(4.2,.12,.32,0x806c57,0,-.045,z,this.rideTrack);sleeper.userData.baseZ=z;this.rideSleepers.push(sleeper);}
+    for(const x of [-1.15,1.15])this.box(.12,.16,42,0xd6dedc,x,.13,0,this.rideTrack);
+    this.rideTrack.visible=false;
+    this.rideCamera.position.set(7,3.6,8);this.rideCamera.lookAt(0,1.05,0);
+  }
+  private renderRideView(j:Journey|undefined,dt:number){
+    const overlay=document.getElementById('ride-view');
+    const active=!!j&&j.rideAt!==null&&!j.facts.vehicleStopped&&!['parent','scooter'].includes(j.scenario.mode)&&!!overlay&&!overlay.hidden;
+    this.container.dataset.ridePreview=active?'moving':'off';
+    if(!active||!j||!overlay)return;
+    if(this.rideMode!==j.scenario.mode){
+      this.rideScene.remove(this.rideVehicle);
+      this.rideVehicle.traverse(o=>{if(o instanceof THREE.Mesh){o.geometry.dispose();if(o.material instanceof THREE.Material)o.material.dispose();}});
+      this.rideVehicle=this.makeVehicle(j.scenario.mode,false);this.rideScene.add(this.rideVehicle);this.rideMode=j.scenario.mode;this.rideDistance=0;
+      this.rideRoad.visible=j.scenario.mode!=='mrt';this.rideTrack.visible=j.scenario.mode==='mrt';
+      this.rideCamera.fov=j.scenario.mode==='mrt'?55:46;this.rideCamera.updateProjectionMatrix();
+    }
+    const distance=dt*(j.scenario.mode==='mrt'?5.2:4.2);this.rideDistance+=distance;
+    for(const line of this.rideLines)line.position.z=((Number(line.userData.baseZ)+this.rideDistance+18)%36)-18;
+    for(const sleeper of this.rideSleepers)sleeper.position.z=((Number(sleeper.userData.baseZ)+this.rideDistance+19.5)%39)-19.5;
+    for(const wheel of (this.rideVehicle.userData.wheels??[]) as THREE.Group[])wheel.rotation.x+=distance/(wheel.userData.radius as number);
+    this.rideVehicle.position.y=this.reduced?0:Math.sin(this.rideDistance*2)*.025;
+    this.container.dataset.rideWheelAngle=this.wheelAngle(this.rideVehicle);
+    const canvas=this.renderer.domElement.getBoundingClientRect(),box=overlay.getBoundingClientRect();
+    const x=box.left-canvas.left,y=canvas.bottom-box.bottom,w=box.width,h=box.height;
+    this.rideCamera.aspect=w/h;this.rideCamera.updateProjectionMatrix();
+    this.renderer.setViewport(x,y,w,h);this.renderer.setScissor(x,y,w,h);this.renderer.setScissorTest(true);
+    this.renderer.render(this.rideScene,this.rideCamera);
+    this.renderer.setScissorTest(false);this.renderer.setViewport(0,0,canvas.width,canvas.height);
   }
   buildCabin(){
     this.root.add(this.transportCabin,this.scooterCabin);
@@ -379,7 +419,7 @@ export class World {
     }
     this.updateLabels(j?.scenario.mode==='scooter'&&j.inside?{x:this.avatar.position.x,z:this.avatar.position.z}:j?.position??explore);
     this.scene.fog=!j&&this.overview?null:this.mapFog;
-    this.camera.lookAt(this.focus.x,0,this.focus.z);this.renderer.render(this.scene,this.camera);
+    this.camera.lookAt(this.focus.x,0,this.focus.z);this.renderer.render(this.scene,this.camera);this.renderRideView(j,dt);
   }
   face(from:Point,to:Point){this.avatar.rotation.y=Math.atan2(to.x-from.x,to.z-from.z);}
   quality(low:boolean){this.low=low;this.renderer.setPixelRatio(low?1:Math.min(devicePixelRatio,1.7));this.renderer.shadowMap.enabled=!low;this.resize();}

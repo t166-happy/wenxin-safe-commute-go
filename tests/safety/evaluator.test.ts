@@ -3,7 +3,7 @@ import {SafetyRuleEvaluator} from '../../src/safety/evaluator';
 import {rules} from '../../src/safety/rules';
 import {chainCollision,chainWalls,gateWall,intersects} from '../../src/safety/checkpoints';
 import {scenarios,validateScenario} from '../../src/data/scenarios';
-import {Journey} from '../../src/game/journey';
+import {Journey,INTERACTION_RADIUS} from '../../src/game/journey';
 import {Exploration,exploreSites,nearbySite} from '../../src/game/explore';
 import {campusParkingArea,campusWalls,crossings,crossesVehicleGate,frontRoad,hitsCampusWall,onPedestrianSpace,onMarkedCrosswalk,otherRoads,signalPlacements} from '../../src/game/streetMap';
 import {crossingGuideRoutes,guideDirectionProgress,receivingTeacherProgress} from '../../src/game/crossingGuides';
@@ -27,6 +27,14 @@ describe('V2.4 continuous chain, corners, endpoint closure and swept collisions'
   it('end caps block bypasses without closing the tree path or the vehicle entrance',()=>{expect(chainCollision({x:0,z:-15},{x:0,z:-12},true)).toBe(true);expect(chainCollision({x:0,z:1},{x:0,z:-2},true)).toBe(true);expect(chainCollision({x:6,z:1},{x:6,z:-2},true)).toBe(false);expect(chainCollision({x:-6,z:2},{x:-6,z:-2},true)).toBe(false);});
 });
 describe('V2.4 scene data validation',()=>{
+  it('requires the avatar to stand inside the visible gold interaction circle',()=>{
+    const j=new Journey(scenarios.find(s=>s.id==='walk')!);
+    const target=j.current.target;
+    j.position={x:target.x+INTERACTION_RADIUS+.1,z:target.z};j.update(.5);
+    expect(j.attempt('stop')).toBe(false);expect(j.blocked?.ruleId).toBe('approach');
+    j.retry();j.position={x:target.x+INTERACTION_RADIUS-.1,z:target.z};j.update(.5);
+    expect(j.attempt('stop')).toBe(true);
+  });
   it('exterior school bus and courtyard shuttle never share stop coordinates',()=>{const a=scenarios.find(s=>s.mode==='school_bus')!,b=scenarios.find(s=>s.mode==='after_school_shuttle')!;expect(a.stop).not.toEqual(b.stop);expect(()=>validateScenario({...a,stop:{x:6,z:-5}})).toThrow();expect(()=>validateScenario({...b,stop:{x:6,z:9}})).toThrow();});
   it('school bus and both road-edge car pickup zones remain separate from pedestrians',()=>{const school=scenarios.find(s=>s.mode==='school_bus')!,cars=scenarios.filter(s=>s.mode==='parent');expect(cars).toHaveLength(2);expect(cars.map(s=>s.stop!.x).sort((a,b)=>a-b)).toEqual([-16,12]);for(const car of cars){expect(car.stop!.z).toBe(6);expect(onPedestrianSpace(car.stop!)).toBe(false);expect(Math.hypot(school.stop!.x-car.stop!.x,school.stop!.z-car.stop!.z)).toBeGreaterThan(10);expect(()=>validateScenario({...car,stop:school.stop})).toThrow();}});
   it('each parent car starts seated, drops off on its own side, then reaches the sidewalk',()=>{for(const car of scenarios.filter(s=>s.mode==='parent')){const j=new Journey(car);expect(j.steps.slice(0,7).map(s=>s.id)).toEqual(['park','unbuckle','rear','side','alight','clearCar','walkToCrossing']);expect(j.steps.map(s=>s.id)).not.toContain('queue');expect(j.steps.map(s=>s.id)).not.toContain('board');expect(j.inside).toBe(true);expect(j.facts.buckled).toBe(true);j.update(5);for(let i=0;i<5;i++)expect(j.attempt(j.current.action),`${car.id}/${j.current.id}`).toBe(true);expect(j.position).toEqual({x:car.stop!.x-2.4,z:10.8});j.position={...j.current.target};expect(j.attempt('clearCar')).toBe(true);expect(j.facts.doorClosed).toBe(true);expect(j.departAt).not.toBeNull();}});

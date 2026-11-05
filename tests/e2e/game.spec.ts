@@ -45,6 +45,24 @@ test('main and side crossing show a green walking figure only while cars stop',a
   await expect(page.locator('#world')).toHaveAttribute('data-guides','sidewalk');
   expect(Number(await page.locator('#world').getAttribute('data-main-teacher-z'))).toBeCloseTo(.2,1);
 });
+test('the guide explains gold rings and auto walk reaches one before the action',async({page})=>{
+  await page.setViewportSize({width:1366,height:768});await start(page);
+  await page.locator('#guide').click();
+  await expect(page.locator('#guide-panel')).toContainText('走進地上的金色圈');
+  await expect(page.locator('#guide-panel')).toContainText('抵達後仍須自己按動作');
+  await page.locator('[data-close="guide-panel"]').click();
+  const initial=Number(await page.locator('#app').getAttribute('data-z'));
+  await page.locator('#assist').click();
+  await expect(page.locator('#interaction-hint')).toContainText('正走向金色圈');
+  await expect(page.locator('#app')).toHaveAttribute('data-in-interaction-circle','true',{timeout:40000});
+  await expect(page.locator('#interact')).toHaveClass(/ready/);
+  await expect(page.locator('#interaction-hint')).toContainText('已到金色圈內');
+  expect(Number(await page.locator('#app').getAttribute('data-z'))).not.toBe(initial);
+  await expect(page.locator('#app')).toHaveAttribute('data-stage','stop');
+  mkdirSync('docs/screenshots',{recursive:true});await page.screenshot({path:'docs/screenshots/gold-circle-ready-1366.png'});
+  await page.locator('#interact').click();
+  await expect(page.locator('#app')).toHaveAttribute('data-stage','left');
+});
 test('3D wheels rotate with road traffic and scooters, then stop with brake lights',async({page})=>{
   await page.setViewportSize({width:1366,height:768});await page.goto('/');await page.locator('#start').click();
   const world=page.locator('#world');
@@ -105,6 +123,51 @@ async function moveAndAct(page:Page,touch=false){
   }
   throw new Error(`Repeated crossing signal change at ${before}`);
 }
+test('shuttle ride shows a 3D outside view with visibly turning wheels',async({page})=>{
+  await page.setViewportSize({width:1366,height:768});await start(page,'after_school_shuttle_courtyard');
+  let count=0;while(await stage(page)!=='depart'&&count++<10)await moveAndAct(page);
+  await expect(page.locator('#app')).toHaveAttribute('data-stage','depart');
+  await moveAndAct(page);
+  await expect(page.locator('#ride-view')).toBeVisible();
+  await expect(page.locator('#world')).toHaveAttribute('data-ride-preview','moving');
+  const before=Number(await page.locator('#world').getAttribute('data-ride-wheel-angle'));
+  await expect.poll(async()=>Math.abs(Number(await page.locator('#world').getAttribute('data-ride-wheel-angle'))-before),{timeout:3000}).toBeGreaterThan(.5);
+  mkdirSync('docs/screenshots',{recursive:true});await page.screenshot({path:'docs/screenshots/shuttle-ride-wheels-1366.png'});
+  await expect(page.locator('#ride-view')).toBeHidden({timeout:10000});
+  await expect(page.locator('#world')).toHaveAttribute('data-ride-preview','off');
+});
+test('mobile shuttle ride keeps the rolling-wheel view inside the screen',async({page})=>{
+  await page.setViewportSize({width:390,height:844});await start(page,'after_school_shuttle_courtyard');
+  let count=0;while(await stage(page)!=='depart'&&count++<10)await moveAndAct(page);
+  await moveAndAct(page);
+  await expect(page.locator('#ride-view')).toBeVisible();
+  const box=(await page.locator('#ride-view').boundingBox())!;
+  expect(box.x).toBeGreaterThanOrEqual(0);expect(box.x+box.width).toBeLessThanOrEqual(390);
+  const before=Number(await page.locator('#world').getAttribute('data-ride-wheel-angle'));
+  await expect.poll(async()=>Math.abs(Number(await page.locator('#world').getAttribute('data-ride-wheel-angle'))-before),{timeout:3000}).toBeGreaterThan(.5);
+  await page.screenshot({path:'docs/screenshots/shuttle-ride-wheels-390.png'});
+  expect(await page.evaluate(()=>document.documentElement.scrollWidth>innerWidth)).toBe(false);
+});
+test('three-car metro ride displays turning train wheels',async({page})=>{
+  await page.setViewportSize({width:1366,height:768});await start(page,'mrt');
+  let count=0;while(await stage(page)!=='depart'&&count++<12)await moveAndAct(page);
+  await expect(page.locator('#app')).toHaveAttribute('data-stage','depart');
+  await moveAndAct(page);
+  await expect(page.locator('#ride-view')).toBeVisible();
+  const before=Number(await page.locator('#world').getAttribute('data-ride-wheel-angle'));
+  await expect.poll(async()=>Math.abs(Number(await page.locator('#world').getAttribute('data-ride-wheel-angle'))-before),{timeout:3000}).toBeGreaterThan(.5);
+  await page.screenshot({path:'docs/screenshots/metro-ride-wheels-1366.png'});
+});
+for(const scene of ['school_bus_gate_exterior','bus'])test(`${scene} ride displays rolling wheels`,async({page})=>{
+  await page.setViewportSize({width:1366,height:768});await start(page,scene);
+  let count=0;while(await stage(page)!=='depart'&&count++<12)await moveAndAct(page);
+  await expect(page.locator('#app')).toHaveAttribute('data-stage','depart');
+  await moveAndAct(page);
+  await expect(page.locator('#ride-view')).toBeVisible();
+  const before=Number(await page.locator('#world').getAttribute('data-ride-wheel-angle'));
+  await expect.poll(async()=>Math.abs(Number(await page.locator('#world').getAttribute('data-ride-wheel-angle'))-before),{timeout:3000}).toBeGreaterThan(.5);
+  await page.screenshot({path:`docs/screenshots/${scene}-ride-wheels-1366.png`});
+});
 for(const scene of ['walk','walk_side'])test(`${scene} enters school directly after crossing`,async({page})=>{
   await page.setViewportSize({width:1366,height:768});await start(page,scene);
   await expect(page.locator('#greeting-reminder')).toBeHidden();
@@ -293,6 +356,8 @@ test('parent drop-off starts in a car and prevents opening the door while moving
   await page.setViewportSize({width:1366,height:768});await start(page,'parent');
   await expect(page.locator('#app')).toHaveAttribute('data-stage','park');
   await expect(page.locator('#app')).toHaveAttribute('data-mode','parent');
+  await expect(page.locator('#interaction-hint')).toContainText('車內坐穩');
+  await expect(page.locator('#toast')).toContainText('已坐在車上');
   expect(Number(await page.locator('#app').getAttribute('data-x'))).toBeCloseTo(130,1);
   await page.screenshot({path:'docs/screenshots/parent-dropoff-1366.png'});
   await page.locator('#exit-vehicle').click();await expect(page.locator('#feedback')).toBeVisible();
@@ -305,6 +370,7 @@ test('parent drop-off starts in a car and prevents opening the door while moving
 
 test('main-gate scooter follows the lead vehicle into its own stopping bay',async({page})=>{
   await page.setViewportSize({width:1366,height:768});await start(page,'scooter_main');
+  await expect(page.locator('#interaction-hint')).toContainText('車內坐穩');
   await expect(page.locator('#world')).toHaveAttribute('data-scooter-queue','lead-departing');
   await expect(page.locator('#status-banner')).toContainText('前車駛離中');
   const leadX=Number(await page.locator('#world').getAttribute('data-scooter-lead-x'));
@@ -319,6 +385,8 @@ test('touch scooter arrival waits for its turn before the side-gate drop-off',as
   const context=await browser.newContext({viewport:{width:390,height:844},isMobile:true,hasTouch:true});const page=await context.newPage();
   await start(page,'scooter_side',false,true);await expect(page.locator('#app')).toHaveAttribute('data-stage','arrival');
   await expect(page.locator('#app')).toHaveAttribute('data-mode','scooter');
+  await expect(page.locator('#interaction-hint')).toContainText('車內坐穩');
+  await expect(page.locator('#toast')).toContainText('已坐在車上');
   await expect(page.locator('#world')).toHaveAttribute('data-scooter-queue','lead-departing');
   await expect(page.locator('#status-banner')).toContainText('前車駛離中');
   const hud=await page.locator('#hud').boundingBox(),banner=await page.locator('#status-banner').boundingBox();

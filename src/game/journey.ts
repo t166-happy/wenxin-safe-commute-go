@@ -4,6 +4,7 @@ import type {Scenario} from '../data/scenarios';
 import {campusParkingArea,crossesVehicleGate,crossings,frontRoad,hitsCampusWall,onMarkedCrosswalk,onPedestrianSpace,otherRoads} from './streetMap';
 import {crossingGuideRoutes} from './crossingGuides';
 export interface Step {id:string;label:string;action:string;verb:string;target:Point;rule:string;tip:string}
+export const INTERACTION_RADIUS=.8; // The visible gold ring is the actual action area.
 const p=(x:number,z:number):Point=>({x,z});
 const step=(id:string,label:string,action:string,verb:string,target:Point,rule='approach',tip='走到金色標記旁，按互動鍵。'):Step=>({id,label,action,verb,target,rule,tip});
 function walking(reverse=false,x:number=crossings[0].x):Step[]{
@@ -138,7 +139,7 @@ export class Journey {
     }
     if(action==='help')return this.evaluate('help',{safePlace:this.inside?!!this.facts.seated&&(!!this.facts.buckled||!!this.facts.holdingRail||this.scenario.mode==='scooter'&&!!this.facts.helmeted&&!!this.facts.feetOnFootrests):safePlace}).allowed;
     const current=this.current;if(!current)return false;
-    const near=Math.hypot(this.position.x-current.target.x,this.position.z-current.target.z)<1.4;
+    const near=Math.hypot(this.position.x-current.target.x,this.position.z-current.target.z)<=INTERACTION_RADIUS;
     if(action!==current.action){const rule=action==='board'?(this.scenario.mode==='scooter'?'scooterBoard':'board'):action==='alight'?(this.scenario.mode==='scooter'?'scooterAlight':this.scenario.mode==='parent'?'parentAlight':'alight'):action==='unbuckle'?'unbuckle':action==='seat'?(this.scenario.mode==='scooter'?'scooterSeat':'seat'):action==='place'?'improve':'approach';return this.evaluate(rule,{...overrides,nearTarget:false,...(rule==='seat'||rule==='scooterSeat'?{correctSeat:false}:{})}).allowed&&false;}
     if(!near){this.evaluate('approach',{nearTarget:false});return false;}
     const extras:Facts={nearTarget:near,...overrides};
