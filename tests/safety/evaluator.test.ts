@@ -1,7 +1,7 @@
 import {describe,it,expect} from 'vitest';
 import {SafetyRuleEvaluator} from '../../src/safety/evaluator';
 import {rules} from '../../src/safety/rules';
-import {chainCollision,chainWalls,gateWall,intersects} from '../../src/safety/checkpoints';
+import {chainCollision,chainWalls,gateWall,intersects,sideGateChainCollision,sideGateChainWalls} from '../../src/safety/checkpoints';
 import {scenarios,validateScenario} from '../../src/data/scenarios';
 import {Journey,INTERACTION_RADIUS} from '../../src/game/journey';
 import {Exploration,exploreSites,nearbySite} from '../../src/game/explore';
@@ -25,6 +25,26 @@ describe('V2.4 continuous chain, corners, endpoint closure and swept collisions'
   it('diagonal high-delta tunneling fails',()=>{expect(chainCollision({x:-5,z:-12},{x:8,z:-7},true)).toBe(true);});
   for(const box of [...chainWalls,gateWall])it(`walls block endpoints ${box.minZ}`,()=>{expect(intersects({x:box.minX-1,z:box.minZ},{x:box.maxX+1,z:box.minZ},box)).toBe(true);});
   it('end caps block bypasses without closing the tree path or the vehicle entrance',()=>{expect(chainCollision({x:0,z:-15},{x:0,z:-12},true)).toBe(true);expect(chainCollision({x:0,z:1},{x:0,z:-2},true)).toBe(true);expect(chainCollision({x:6,z:1},{x:6,z:-2},true)).toBe(false);expect(chainCollision({x:-6,z:2},{x:-6,z:-2},true)).toBe(false);});
+});
+describe('side-gate cone-and-chain pedestrian separation',()=>{
+  it('forms a continuous L-shaped collider along both sides of the parking edge',()=>{
+    expect(sideGateChainWalls).toHaveLength(2);
+    for(let z=-12.9;z<=-1.7;z+=.19)expect(sideGateChainCollision({x:-27,z},{x:-24,z}),`west edge at ${z}`).toBe(true);
+    for(let x=-25.2;x<=-15.6;x+=.19)expect(sideGateChainCollision({x,z:-15.5},{x,z:-11.7}),`south edge at ${x}`).toBe(true);
+    expect(sideGateChainCollision({x:-27,z:-15.5},{x:-14,z:-15.5})).toBe(false);
+    expect(sideGateChainCollision({x:-27,z:-8},{x:-26.6,z:-15.5})).toBe(false);
+  });
+  it('blocks diagonal and corner shortcuts without blocking the side-gate walk to the building',()=>{
+    expect(sideGateChainCollision({x:-27,z:-10},{x:-17,z:-12})).toBe(true);
+    expect(sideGateChainCollision({x:-27,z:-15.5},{x:-23,z:-9})).toBe(true);
+    for(const point of [{x:-27,z:-8},{x:-26.6,z:-15.5},{x:-14,z:-15.5},{x:-14,z:-17.2}])expect(onPedestrianSpace(point)).toBe(true);
+    const e=new Exploration();e.position={x:-27,z:-8};let blocked='';e.onResult=r=>{blocked=r.ruleId;};expect(e.move(3,0)).toBe(false);expect(blocked).toBe('sideBarrier');
+    expect(e.move(.4,0)).toBe(true);expect(e.move(0,-7.5)).toBe(true);expect(e.move(12.6,0)).toBe(true);expect(e.move(0,-1.7)).toBe(true);
+    expect(e.position.x).toBeCloseTo(-14);expect(e.position.z).toBeCloseTo(-17.2);
+    const j=new Journey(scenarios.find(s=>s.id==='walk_side')!);j.position={x:-27,z:-8};j.index=j.steps.findIndex(s=>s.id==='destination');
+    expect(j.move(3,0)).toBe(false);expect(j.blocked?.ruleId).toBe('sideBarrier');
+    j.retry();j.position={x:-27,z:-8};expect(j.move(.4,0)).toBe(true);expect(j.move(0,-7.5)).toBe(true);expect(j.move(12.6,0)).toBe(true);expect(j.move(0,-1.7)).toBe(true);
+  });
 });
 describe('V2.4 scene data validation',()=>{
   it('requires the avatar to stand inside the visible gold interaction circle',()=>{
@@ -101,7 +121,7 @@ describe('V2.4 scene data validation',()=>{
       const direct=new Journey(scenarios.find(s=>s.id===id)!);direct.index=direct.steps.findIndex(s=>s.id==='destination');direct.position={...direct.current.target};expect(direct.attempt('finish')).toBe(true);expect(direct.complete).toBe(true);expect(direct.teacherGreeted).toBe(false);
     }
   });
-  it('side entrance requires its own crossing safety checks and ends on the campus side',()=>{const side=scenarios.find(s=>s.id==='walk_side')!;const j=new Journey(side);expect(j.steps.map(step=>step.id)).toEqual(['approachSide','stop','left','right','wait','cross','destination']);expect(j.steps[0].target).toEqual({x:-43,z:-10});expect(j.steps.at(-1)?.target).toEqual({x:-27,z:-8});j.position={x:-41,z:-8};expect(j.move(2,0)).toBe(false);expect(j.blocked?.ruleId).toBe('cross');});
+  it('side entrance requires its own crossing safety checks and ends at the building-side walk',()=>{const side=scenarios.find(s=>s.id==='walk_side')!;const j=new Journey(side);expect(j.steps.map(step=>step.id)).toEqual(['approachSide','stop','left','right','wait','cross','destination']);expect(j.steps[0].target).toEqual({x:-43,z:-10});expect(j.steps.at(-1)?.target).toEqual({x:-14,z:-17.2});j.position={x:-41,z:-8};expect(j.move(2,0)).toBe(false);expect(j.blocked?.ruleId).toBe('cross');});
   it('four perimeter sides block shortcuts while the small main and side gates stay open',()=>{
     expect(hitsCampusWall({x:-14,z:-2},{x:-14,z:0})).toBe(true);
     expect(hitsCampusWall({x:6,z:-2},{x:6,z:0})).toBe(false);
@@ -113,7 +133,7 @@ describe('V2.4 scene data validation',()=>{
     expect(hitsCampusWall({x:11,z:-13},{x:13,z:-13})).toBe(true);
     expect(hitsCampusWall({x:0,z:-28},{x:0,z:-27})).toBe(true);
   });
-  it('side-gate pedestrians stay out of the adjacent parking area',()=>{const e=new Exploration();e.position={x:-27,z:-8};let blocked='';e.onResult=r=>{blocked=r.ruleId;};expect(e.move(3,0)).toBe(false);expect(blocked).toBe('vehicleLane');expect(e.position).toEqual({x:-27,z:-8});expect(campusParkingArea.minX).toBeGreaterThan(-28);});
+  it('side-gate pedestrians stay behind the chain and out of the adjacent parking area',()=>{const e=new Exploration();e.position={x:-27,z:-8};let blocked='';e.onResult=r=>{blocked=r.ruleId;};expect(e.move(3,0)).toBe(false);expect(blocked).toBe('sideBarrier');expect(e.position).toEqual({x:-27,z:-8});expect(campusParkingArea.minX).toBeGreaterThan(-28);});
   it('motorcycle arrival waits its turn and cannot alight while moving',()=>{for(const bike of scenarios.filter(s=>s.mode==='scooter')){const j=new Journey(bike);expect(j.steps.slice(0,4).map(s=>s.id)).toEqual(['arrival','rear','alight','clearScooter']);expect(j.steps.map(s=>s.id)).not.toContain('board');expect(j.inside).toBe(true);expect(j.facts.helmeted).toBe(true);expect(j.attempt('alight')).toBe(false);expect(j.blocked?.ruleId).toBe('scooterAlight');j.retry();j.update(2);expect(j.attempt('arrival')).toBe(false);expect(j.blocked?.ruleId).toBe('scooterArrival');j.retry();j.update(3);expect(j.attempt('arrival')).toBe(true);expect(j.facts.motorcycleTurn).toBe(true);expect(j.attempt('rear')).toBe(true);expect(j.attempt('alight')).toBe(true);expect(j.inside).toBe(false);}});
   it('rear traffic blocks parent door opening until the safe observation window',()=>{const car=scenarios.find(s=>s.id==='parent')!;const j=new Journey(car);j.update(5);expect(j.attempt('park')).toBe(true);expect(j.attempt('unbuckle')).toBe(true);j.update(14.2);expect(j.facts.rearTrafficClear).toBe(false);expect(j.attempt('rear')).toBe(false);expect(j.blocked?.ruleId).toBe('parentRear');j.retry();j.update(5);expect(j.facts.rearTrafficClear).toBe(true);expect(j.attempt('rear')).toBe(true);expect(j.attempt('side')).toBe(true);expect(j.attempt('alight')).toBe(true);});
 });

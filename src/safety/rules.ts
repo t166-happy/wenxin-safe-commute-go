@@ -7,6 +7,7 @@ export const rules: Record<string, RuleDefinition> = {
   approach:rule('approach','請沿行人空間走到標記旁。',['nearTarget']),
   cross:rule('cross','先停看，等行人綠燈並確認車輛停讓。',['stopped','lookLeft','lookRight','green','trafficYielded','onCrosswalk']),
   barrier:rule('barrier','鏈條是人車分界，請走指定登車口。',['boundaryClear']),
+  sideBarrier:rule('sideBarrier','側門錐鏈分隔停車區，請沿學生步道走向校舍。',['boundaryClear']),
   vehicleLane:rule('vehicleLane','候車請留在人行空間，不站進車輛進場與停靠動線。',['safePlace']),
   gate:rule('gate','先核對車輛、排隊，等車停妥及成人放行。',['vehicleStopped','vehicleCorrect','adultCleared','studentTurn','crossingConflictFree']),
   board:rule('board','車停穩、開門、輪到自己，再依引導上車。',['vehicleStopped','doorOpen','vehicleCorrect','adultCleared','studentTurn','crossingConflictFree']),

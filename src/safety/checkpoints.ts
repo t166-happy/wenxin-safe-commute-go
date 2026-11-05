@@ -20,6 +20,15 @@ export const chainWalls:Box[]=[
   {minX:-3,maxX:1,minZ:-1.6,maxZ:-1.2},
 ];
 export const gateWall:Box={minX:0.8,maxX:1.2,minZ:-6.2,maxZ:-3.8};
+// Side-gate parking is separated from the route to the school building.
+// The two spans meet at the corner; there is no shortcut between cones.
+export const sideGateChainWalls:Box[]=[
+  {minX:-25.5,maxX:-25.2,minZ:-13.3,maxZ:-1.5},
+  {minX:-25.5,maxX:-15.4,minZ:-13.3,maxZ:-13.0},
+];
 export function chainCollision(from:Point,to:Point,gateOpen:boolean):boolean {
   return [...chainWalls,...(gateOpen?[]:[gateWall])].some(box=>intersects(from,to,box));
+}
+export function sideGateChainCollision(from:Point,to:Point):boolean {
+  return sideGateChainWalls.some(box=>intersects(from,to,box));
 }

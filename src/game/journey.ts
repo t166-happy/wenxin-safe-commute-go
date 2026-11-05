@@ -1,5 +1,5 @@
 import {SafetyRuleEvaluator,type Evaluation,type Facts} from '../safety/evaluator';
-import {chainCollision,intersects,type Point,type Box} from '../safety/checkpoints';
+import {chainCollision,intersects,sideGateChainCollision,type Point,type Box} from '../safety/checkpoints';
 import type {Scenario} from '../data/scenarios';
 import {campusParkingArea,crossesVehicleGate,crossings,frontRoad,hitsCampusWall,onMarkedCrosswalk,onPedestrianSpace,otherRoads} from './streetMap';
 import {crossingGuideRoutes} from './crossingGuides';
@@ -14,7 +14,7 @@ function walking(reverse=false,x:number=crossings[0].x):Step[]{
     step('left','看看左方來車','left','👀 看左方',p(reverse?-33:-41.5,z)),step('right','看看右方與轉彎車','right','👀 看右方',p(reverse?-33:-41.5,z)),
     step('wait','確認行人號誌燈號','wait','🚦 確認行人號誌燈號',p(reverse?-33:-41.5,z),'cross','看行人號誌是否亮起小綠人；確認車輛停讓後再按互動。'),
     step('cross','沿復興北路斑馬線走到對面','cross','🚶 完成穿越',p(reverse?-42:-35,z),'cross'),
-    step('destination',reverse?'安全抵達復興北路示意街區':'經過老師／志工，沿側門步道入校','finish','🏁 抵達',p(reverse?-43:-27,reverse?-18:z),'approach',reverse?'沿人行步道前進。':'經過老師／志工時可按「問好」，沿步道直接入校。')
+    step('destination',reverse?'安全抵達復興北路示意街區':'經過老師／志工，沿錐鏈內側步道走向校舍','finish','🏁 抵達',p(reverse?-43:-14,reverse?-18:-17.2),'approach',reverse?'沿人行步道前進。':'經過老師／志工時可按「問好」；進側門後沿錐鏈內側步道，繞過停車區到校舍。')
   ];}
   const edge=reverse?.6:8.7,end=reverse?8.7:.6;
   return [step('stop','在路口安全區停下','stop','✋ 停步',p(x,edge),'approach','鬆開移動鍵，停在路緣的金色圓圈。'),step('left','看看左方來車','left','👀 看左方',p(x,edge)),step('right','看看右方與轉彎車','right','👀 看右方',p(x,edge)),step('wait','確認行人號誌燈號','wait','🚦 確認行人號誌燈號',p(x,edge),'cross','看行人號誌是否亮起小綠人；確認車輛停讓後再按互動。'),step('cross','沿斑馬線走到對面','cross','🚶 完成穿越',p(x,end),'cross'),step('destination',reverse?'安全抵達示意街角':'經過老師／志工，沿左側步道入校','finish','🏁 抵達',p(x,reverse?12:-10),'approach',reverse?'沿人行步道前進。':'經過老師／志工時可按「問好」，沿步道直接入校。')];
@@ -42,7 +42,7 @@ export function makeSteps(s:Scenario,reverse:boolean):Step[]{
       step('rear','觀察後方車輛與旁邊行人','rear','👀 看周圍',seat,'scooterRear'),
       step('alight','停穩且周圍安全後，從人行道側下車','alight','🚶 安全下車',seat,'scooterAlight'),
       step('clearScooter','離開機車停靠點，站回人行道','clearScooter','🚶 回到步道',side?p(-33,-8):p(-4,11.5),'scooterClear','不在車道逗留；機車依序駛離，避免與兩側汽車接送混流。'),
-      ...(side?[step('destination','從復興北路側門步道進校','finish','🏁 抵達',p(-27,-8))]:walking(false)),
+      ...(side?[step('destination','從復興北路側門錐鏈內側步道走向校舍','finish','🏁 抵達',p(-14,-17.2))]:walking(false)),
     ];
   }
   const shuttle=s.mode==='after_school_shuttle';
@@ -88,6 +88,12 @@ export class Journey {
     return Math.hypot(this.position.x-teacher.x,this.position.z-teacher.z)<3.6;
   }
   get assistedTarget():Point{
+    // Follow the L-shaped pedestrian route around the side-gate parking area.
+    if(!this.reverse&&['walk_side','scooter_side'].includes(this.scenario.id)&&this.current?.id==='destination'){
+      if(this.position.x< -26.75)return p(-26.6,-8);
+      if(this.position.z> -15.35)return p(-26.6,-15.5);
+      if(this.position.x< -14.2)return p(-14,-15.5);
+    }
     // After leaving the main-gate scooter, follow the sidewalk behind its stopping bay.
     // Walking straight to the crossing would cut through the vehicle approach area.
     if(this.scenario.id==='scooter_main'&&this.current?.id==='stop'&&this.position.x<5.8)return p(6,11);
@@ -194,6 +200,7 @@ export class Journey {
     }
     else {
       const stationWalk=this.scenario.mode==='mrt'&&to.x>=47&&to.x<=79&&to.z>=9&&to.z<=15.5;
+      if(sideGateChainCollision(this.position,to)){this.evaluate('sideBarrier',{boundaryClear:false});return false;}
       if(!(onPedestrianSpace(to)||stationWalk||onMarkedCrosswalk(to))){if(otherRoads.some(road=>intersects(this.position,to,road)))this.evaluate('vehicleLane',{safePlace:false});return false;}
       if(intersects(this.position,to,campusParkingArea)){this.evaluate('vehicleLane',{safePlace:false});return false;}
       if(this.scenario.stop&&(this.scenario.stop.z>=7||this.scenario.mode==='parent')&&intersects(this.position,to,{minX:this.scenario.stop.x-2,maxX:this.scenario.stop.x+2,minZ:this.scenario.mode==='parent'?4.6:7.1,maxZ:this.scenario.mode==='parent'?7.35:10.4})){
@@ -201,7 +208,7 @@ export class Journey {
       }
       if(crossesVehicleGate(this.position,to)){this.evaluate('vehicleLane',{safePlace:false});return false;}
       if(hitsCampusWall(this.position,to)||chainCollision(this.position,to,this.gateOpen)){this.evaluate('barrier',{boundaryClear:false});return false;}
-      if(to.x<.8&&to.x> -15&&to.z<0&&(to.z< -5.85||to.z> -4.15)){
+      if(to.x<.8&&to.x> -15&&to.z<0&&to.z> -13.7&&(to.z< -5.85||to.z> -4.15)){
         this.evaluate('barrier',{boundaryClear:false});return false;
       }
       if(this.obstacles.some(box=>intersects(this.position,to,box)))return false;

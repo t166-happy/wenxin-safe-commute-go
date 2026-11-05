@@ -136,7 +136,14 @@ export class World {
       this.box(1.75,.65,3.4,color,x,.45,-7);this.box(1.55,.58,1.85,0xdde8e2,x,1.04,-7.2);
       for(const wheelZ of [-1.2,1.2])for(const wheelX of [-.9,.9])this.ball(.3,0x3b4950,x+wheelX,.3,-7+wheelZ);
     }
+    // Side gate to classroom building: an L-shaped student path stays outside the parking area.
+    this.box(1.9,.055,8.4,0xdacb9e,-26.6,.055,-12.2);
+    this.box(13.9,.055,3,0xdacb9e,-19.9,.055,-14.9);
+    this.box(1.9,.055,1.9,0xdacb9e,-14,.055,-16.4);
+    this.barrierSpan(-25.35,-1.65,-25.35,-13.15);
+    this.barrierSpan(-25.35,-13.15,-15.4,-13.15);
     this.label('側門旁停車場・學生走分隔步道',-24,2.2,-8,6);
+    this.label('側門至校舍・沿錐鏈內側步道',-20.2,2.2,-15.5,6.5);
     this.label('正門向外看：左側樹蔭・學生步道',7,1.6,-5,6);this.label('正門向外看：右側安親班接駁車・示意',-7,2,-11,7);this.label('文昌五街・教學示意',0,2.7,13,5);this.label('校車區・校門外示意',30,2.7,13,5);
     this.label('汽車送學短停・正門西側示意',-16,2.7,13,6);this.label('汽車送學短停・正門東側示意',12,2.7,13,6);
     this.label('機車依序停妥・正門口示意',-1,2.5,15,5);this.label('機車依序停妥・側門口示意',-33,2.5,-15,5);
@@ -218,6 +225,15 @@ export class World {
   buildLandmarkVehicles(){this.root.add(this.landmarkVehicles);for(const [kind,x,z] of [['school_bus',30,9],['parent',-16,6],['parent',12,6],['scooter',-1,6.5],['scooter',-38,-14],['after_school_shuttle',-6,-5],['mrt',64,17.2]] as const){const vehicle=this.makeVehicle(kind);vehicle.position.set(x,0,z);if(kind==='mrt')vehicle.rotation.y=-Math.PI/2;else if(z>=7||kind==='parent'||kind==='scooter'&&x===-1)vehicle.rotation.y=x>=0?-Math.PI/2:Math.PI/2;this.landmarkVehicles.add(vehicle);}}
   cone(x:number,z:number){this.box(.58,.1,.58,0xf37f44,x,.1,z);const cone=new THREE.Mesh(new THREE.ConeGeometry(.23,.75,8),this.mat(0xf4874c));cone.position.set(x,.5,z);cone.castShadow=true;this.root.add(cone);this.box(.24,.13,.24,0xfff9e6,x,.54,z);}
   chain(start:number,end:number){for(let z=start;z<end;z+=.15){const mesh=new THREE.Mesh(new THREE.TorusGeometry(.1,.022,4,7),this.mat(0xf2d56e));mesh.rotation.y=Math.PI/2;mesh.rotation.x=Math.round(z/.15)%2?Math.PI/3:0;mesh.position.set(1,.95,z);this.root.add(mesh);}}
+  barrierSpan(ax:number,az:number,bx:number,bz:number){
+    const length=Math.hypot(bx-ax,bz-az),dx=(bx-ax)/length,dz=(bz-az)/length;
+    for(let i=0,n=Math.ceil(length/1.25);i<=n;i++){const t=i/n;this.cone(ax+(bx-ax)*t,az+(bz-az)*t);}
+    const geometry=new THREE.TorusGeometry(.1,.025,5,8),material=this.mat(0xf2d56e);
+    for(let offset=.08,i=0;offset<length;offset+=.16,i++){
+      const link=new THREE.Mesh(geometry,material);link.position.set(ax+dx*offset,.95,az+dz*offset);
+      link.rotation.y=Math.abs(dz)>Math.abs(dx)?Math.PI/2:0;link.rotation.x=i%2?Math.PI/3:0;this.root.add(link);
+    }
+  }
   makeTrain(showLabel=true){const g=new THREE.Group();for(const offset of [-8,0,8]){const car=new THREE.Group();this.box(2.55,2.35,7.45,0xb4a0ca,0,1.47,0,car);this.box(2.55,.25,7.45,0x775e9b,0,2.75,0,car);for(const z of [-2.6,-1.5,1.45,2.55])for(const x of [-1.3,1.3])this.box(.04,.85,.8,0x83bfcc,x,2,z,car);this.box(.07,1.85,1.25,0xe8e3d0,-1.32,1.45,.1,car).userData.action='board';for(const z of [-2.4,2.4]){this.box(.4,.48,.65,0x34454e,0,.38,z,car);for(const x of [-1.23,1.23])this.wheel(.34,.2,x,.49,z,car,Math.sign(x));}car.position.z=offset;g.add(car);const wheels=(g.userData.wheels??=[]) as THREE.Group[];wheels.push(...(car.userData.wheels as THREE.Group[]));}if(showLabel)this.label('普通車・3 節車廂・示意',0,3.4,0,5,g);g.traverse(o=>{o.userData.vehicle=true;});return g;}
   makeVehicle(kind:string,showLabel=true){if(kind==='mrt')return this.makeTrain(showLabel);const g=new THREE.Group();if(kind==='scooter'){
       for(const z of [-1.05,1.05])this.wheel(.42,.22,0,.43,z,g);

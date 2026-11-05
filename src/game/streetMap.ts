@@ -21,6 +21,9 @@ export const sidewalkRegions:Box[]=[
   {minX:46.2,maxX:49,minZ:-29.5,maxZ:7.4},   // 東側街區外側
   {minX:-43,maxX:49,minZ:-39,maxZ:-35.5},  // 復興一路北側
   {minX:-35,maxX:-26,minZ:-9.4,maxZ:-6.6}, // 復興北路側門專用行人通道
+  {minX:-27.8,maxX:-26,minZ:-16.4,maxZ:-8}, // 側門內沿停車區西側的學生步道
+  {minX:-27,maxX:-13.2,minZ:-16.4,maxZ:-13.4}, // 繞過停車區通往校舍，步道延伸至錐鏈前
+  {minX:-15,maxX:-13.2,minZ:-17.3,maxZ:-15}, // 校舍前的步道末端
 ];
 export const frontRoad:Box={minX:-57,maxX:86,minZ:2,maxZ:7.3};
 export const otherRoads:Box[]=[

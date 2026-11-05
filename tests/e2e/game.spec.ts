@@ -379,6 +379,22 @@ test('side gate uses a separate crossing, teacher and Blender street model',asyn
   }
   await expect(page.locator('#result')).toBeVisible();expect(errors).toEqual([]);
 });
+test('side-gate cone chain guides the player around parking to the school building',async({page})=>{
+  await page.setViewportSize({width:1366,height:768});await start(page,'walk_side');
+  for(let i=0;i<6;i++)await moveAndAct(page);
+  await expect(page.locator('#app')).toHaveAttribute('data-stage','destination');
+  await page.locator('#assist').click();
+  await expect.poll(async()=>Number(await page.locator('#app').getAttribute('data-x')),{timeout:30000}).toBeGreaterThan(-23);
+  await page.locator('#assist').click();
+  mkdirSync('docs/screenshots',{recursive:true});await page.screenshot({path:'docs/screenshots/side-gate-chain-1366.png'});
+  await page.setViewportSize({width:390,height:844});await page.screenshot({path:'docs/screenshots/side-gate-chain-390.png'});
+  await page.keyboard.down('ArrowDown');await expect(page.locator('#feedback')).toBeVisible({timeout:7000});await page.keyboard.up('ArrowDown');
+  await expect(page.locator('#feedback-message')).toContainText('側門錐鏈分隔停車區');
+  await page.locator('#retry').click();await page.locator('#assist').click();
+  await expect(page.locator('#result')).toBeVisible({timeout:40000});
+  expect(Number(await page.locator('#app').getAttribute('data-x'))).toBeCloseTo(-14,0);
+  expect(Number(await page.locator('#app').getAttribute('data-z'))).toBeCloseTo(-17.2,0);
+});
 test('waiting on vehicle approach path is physically blocked',async({page})=>{
   await start(page,'school_bus_gate_exterior');await page.keyboard.down('ArrowUp');await expect(page.locator('#feedback')).toBeVisible({timeout:6000});await page.keyboard.up('ArrowUp');await expect(page.locator('#feedback-message')).toContainText('候車');expect(Number(await page.locator('#app').getAttribute('data-z'))).toBeGreaterThan(10.6);
 });

@@ -1,4 +1,4 @@
-import {chainCollision,intersects,type Point} from '../safety/checkpoints';
+import {chainCollision,intersects,sideGateChainCollision,type Point} from '../safety/checkpoints';
 import {SafetyRuleEvaluator,type Evaluation} from '../safety/evaluator';
 import {scenarios,type Scenario} from '../data/scenarios';
 import {campusParkingArea,crossesVehicleGate,frontRoad,hitsCampusWall,onPedestrianSpace,otherRoads} from './streetMap';
@@ -35,6 +35,7 @@ export class Exploration {
       this.onResult?.(this.evaluator.evaluate('vehicleLane',{safePlace:false},'map-safe-wait'));
       return false;
     }
+    if(sideGateChainCollision(from,to)){this.onResult?.(this.evaluator.evaluate('sideBarrier',{boundaryClear:false},'map-side-gate-chain'));return false;}
     if(!(onPedestrianSpace(to)||station||destination)){
       return false;
     }

@@ -2,6 +2,7 @@ import type {Evaluation} from './evaluator';
 export const corrective:Record<string,[string,string]>={
   cross:['✋ 在路緣停下','👀 左右觀察 → 等綠燈與停讓'],
   barrier:['🚶 留在左側步道','🚪 沿鏈條走到成人管理的登車口'],
+  sideBarrier:['✋ 停在側門學生步道','🚶 沿錐鏈內側繞過停車區走向校舍'],
   gate:['🔎 核對車號、依序排隊','🧑 等停妥、無車流、成人放行'],
   board:['✋ 退回候車區','🧑 等開門與引導，再依序上車'],
   parentPark:['🛑 坐好並等家長短暫停妥','🚶 停靠處不得占住人行通道'],
