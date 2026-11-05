@@ -2,6 +2,12 @@
 
 日期：2026-11-05（Asia/Taipei）。Windows 開發環境。
 
+## 2026-11-05 行人與車用號誌分開建模
+
+- 正門行人燈移到學生等候側、車用三色燈移到馬路另一側；側門採相同分位。行人燈箱只顯示站立紅人或行走小綠人，車用燈箱才有紅黃綠圓燈。`signalPlacements` 的單元測試檢查兩處燈箱分處道路兩側並相隔超過 6 個遊戲單位。
+- `npm install` 0 弱點，`npm run lint`、`npm run typecheck`、`npm run test`（381/381）、`npm run build` 通過。Playwright 正門綠人／車燈連動與側門完整過街 2/2，側門轉向後再測 1/1，390×844 手機步行與接駁 1/1；正式版 `npm run test:offline` 4/4，涵蓋 1366×768、768×1024、390×844 與離線重載；本機預覽 HTTP 200。
+- 已目視檢查 `screenshots/green-man-crossing-1366.png`、`screenshots/side-gate-signals-1366.png`、`screenshots/mobile-pedestrian-signal-390.png`：學生等候側只見人形行人燈，車用三色燈在道路另一側。現地設備位置與實機 iOS／Android 仍待核實。
+
 ## 2026-11-05 過街行人號誌確認
 
 - 正門與復興北路側門到達路緣時，任務目標與互動鍵均顯示「確認行人號誌燈號」；提示明確要求先看小綠人及車輛停讓。共用安全評估器原有紅燈、停看、車輛停讓與斑馬線條件未放寬，通過後仍直接入校。

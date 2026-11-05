@@ -5,6 +5,12 @@ export const crossings=[
   {id:'main',x:6,z:4.5,label:'正門路口'},
   {id:'side',x:-38,z:-8,label:'復興北路側門路口・示意'},
 ] as const;
+// Pedestrian heads face the waiting child; three-aspect vehicle heads face oncoming traffic
+// across each road. Exact roadside hardware positions remain teaching illustrations.
+export const signalPlacements={
+  main:{pedestrian:{x:8.4,z:8.3,facing:0},vehicle:{x:9.6,z:1.1,facing:Math.PI/2}},
+  side:{pedestrian:{x:-42.3,z:-6.4,facing:Math.PI/2},vehicle:{x:-34.2,z:-4.4,facing:0}},
+} as const;
 export const sidewalkRegions:Box[]=[
   {minX:-57,maxX:86,minZ:7.4,maxZ:14},       // 文昌五街南側
   {minX:-35,maxX:40,minZ:-1.2,maxZ:1.7},   // 圍牆與車道間的連續校側人行道

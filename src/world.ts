@@ -2,15 +2,15 @@ import * as THREE from 'three';
 import type {Journey} from './game/journey';
 import type {Point} from './safety/checkpoints';
 import {exploreSites} from './game/explore';
-import {crossings} from './game/streetMap';
+import {crossings,signalPlacements} from './game/streetMap';
 import {GLTFLoader} from 'three/addons/loaders/GLTFLoader.js';
 const palette={grass:0x9bcba8,path:0xe5dcc7,road:0x536575,cream:0xfff2d3,green:0x386e59,mint:0x82bca3,coral:0xef8f71,yellow:0xffca59,blue:0x428cb4};
 export class World {
   scene=new THREE.Scene();camera=new THREE.PerspectiveCamera(43,1,.1,300);renderer:THREE.WebGLRenderer;
   root=new THREE.Group();avatar=new THREE.Group();vehicle=new THREE.Group();leadScooter=new THREE.Group();gate=new THREE.Group();marker=new THREE.Group();trafficCar=new THREE.Group();sideTrafficCar=new THREE.Group();passenger=new THREE.Group();improvement=new THREE.Group();exploreMarkers=new THREE.Group();landmarkVehicles=new THREE.Group();transportCabin=new THREE.Group();scooterCabin=new THREE.Group();parentCabin=new THREE.Group();
-  greenLamp!:THREE.Mesh;redLamp!:THREE.Mesh;guardArm!:THREE.Mesh;belt!:THREE.Mesh;parentBelt!:THREE.Mesh;helmet!:THREE.Mesh;stationRoof!:THREE.Mesh;
-  sideGreenLamp!:THREE.Mesh;sideRedLamp!:THREE.Mesh;sideGuardArm!:THREE.Mesh;
-  private pedestrianFigures:THREE.Group[]=[];private pedestrianFigureMaterial=this.mat(0x315f4e);private vehicleSignals:{red:THREE.Mesh;amber:THREE.Mesh;green:THREE.Mesh}[]=[];
+  guardArm!:THREE.Mesh;belt!:THREE.Mesh;parentBelt!:THREE.Mesh;helmet!:THREE.Mesh;stationRoof!:THREE.Mesh;
+  sideGuardArm!:THREE.Mesh;
+  private pedestrianSignals:{red:THREE.Group;green:THREE.Group}[]=[];private vehicleSignals:{red:THREE.Mesh;amber:THREE.Mesh;green:THREE.Mesh}[]=[];
   yaw=.3;distance=25;overview=false;reduced=false;low=false;private focus=new THREE.Vector3(-3,0,-2);private ray=new THREE.Raycaster();private clock=0;private lastMode='';private objects:THREE.Object3D[]=[];private readonly labels=new Set<THREE.Sprite>();private readonly labelPosition=new THREE.Vector3();private readonly mapFog=new THREE.Fog(0xe4f0ec,75,225);private readonly wheelOrigins=new WeakMap<THREE.Group,{x:number;z:number}>();
   constructor(readonly container:HTMLElement){
     this.scene.background=new THREE.Color(0xe4f0ec);this.scene.fog=this.mapFog;
@@ -46,23 +46,35 @@ export class World {
     const canvas=document.createElement('canvas');canvas.width=768;canvas.height=160;const c=canvas.getContext('2d')!;c.fillStyle=bg;c.beginPath();c.roundRect(0,0,768,160,22);c.fill();c.fillStyle=fg;c.font='bold 62px "Microsoft JhengHei", sans-serif';c.textAlign='center';c.textBaseline='middle';c.fillText(text,384,82,730);const tex=new THREE.CanvasTexture(canvas);tex.colorSpace=THREE.SRGBColorSpace;const sprite=new THREE.Sprite(new THREE.SpriteMaterial({map:tex,depthTest:true}));sprite.position.set(x,y,z);sprite.scale.set(width,width*160/768,1);sprite.userData.labelText=text;sprite.visible=false;parent.add(sprite);this.labels.add(sprite);return sprite;
   }
   person(color:number){const group=new THREE.Group();this.box(.55,.75,.4,color,0,.88,0,group);this.ball(.31,0xf6cfa8,0,1.55,0,group);this.ball(.33,0x483b33,0,1.72,-.04,group);this.box(.54,.12,.35,0x483b33,0,1.62,-.12,group);this.box(.2,.43,.24,0x354956,-.17,.28,0,group);this.box(.2,.43,.24,0x354956,.17,.28,0,group);this.box(.26,.12,.4,0xfff6df,-.17,.1,.06,group);this.box(.26,.12,.4,0xfff6df,.17,.1,.06,group);this.box(.46,.57,.22,palette.yellow,0,.95,-.3,group);this.box(.15,.62,.2,color,-.36,.9,0,group);this.box(.15,.62,.2,color,.36,.9,0,group);return group;}
-  private pedestrianFigure(x:number,y:number,z:number){
-    const figure=new THREE.Group();const part=(w:number,h:number,px:number,py:number,angle=0)=>{const mesh=new THREE.Mesh(new THREE.BoxGeometry(w,h,.055),this.pedestrianFigureMaterial);mesh.position.set(px,py,0);mesh.rotation.z=angle;figure.add(mesh);return mesh;};
-    const head=new THREE.Mesh(new THREE.SphereGeometry(.09,10,8),this.pedestrianFigureMaterial);head.position.y=.22;figure.add(head);
-    part(.13,.26,0,.03);part(.08,.22,-.11,.04,-.45);part(.08,.22,.11,.04,.45);part(.08,.25,-.07,-.2,.4);part(.08,.25,.09,-.2,-.5);
-    this.box(.62,.68,.055,0x173c31,0,0,-.08,figure);figure.position.set(x,y,z);figure.scale.setScalar(1.2);this.root.add(figure);this.pedestrianFigures.push(figure);return figure;
+  private pedestrianSignal(x:number,z:number,facing:number){
+    const signal=new THREE.Group();signal.position.set(x,0,z);signal.rotation.y=facing;
+    this.box(.12,3.25,.12,0x405458,0,1.625,0,signal);
+    this.box(.94,1.07,.27,0xe2d29a,0,3.05,.02,signal);
+    this.box(.79,.92,.29,0x173a31,0,3.05,.04,signal);
+    const icon=(walking:boolean)=>{
+      const figure=new THREE.Group();figure.position.set(0,3.04,.23);
+      const color=walking?0x66ff91:0xff6158;
+      const material=this.mat(color);material.emissive.setHex(color);material.emissiveIntensity=.9;
+      const part=(w:number,h:number,px:number,py:number,angle=0)=>{const mesh=new THREE.Mesh(new THREE.BoxGeometry(w,h,.065),material);mesh.position.set(px,py,0);mesh.rotation.z=angle;figure.add(mesh);};
+      const head=new THREE.Mesh(new THREE.SphereGeometry(.105,10,8),material);head.position.y=.29;figure.add(head);
+      part(.14,.28,0,.055);
+      if(walking){part(.085,.25,-.15,.07,-.7);part(.085,.25,.15,.07,.7);part(.09,.29,-.105,-.205,.48);part(.09,.29,.115,-.205,-.52);}
+      else{part(.075,.24,-.15,.035,-.1);part(.075,.24,.15,.035,.1);part(.085,.27,-.07,-.205,0);part(.085,.27,.07,-.205,0);}
+      signal.add(figure);return figure;
+    };
+    const red=icon(false),green=icon(true);this.pedestrianSignals.push({red,green});this.root.add(signal);
   }
-  private vehicleSignal(x:number,z:number){
-    this.box(.14,3.3,.14,0x405458,x,1.65,z);this.box(.72,1.52,.34,0x263d40,x,3.45,z);
-    const lamp=(y:number)=>this.ball(.2,0x44504a,x,y,z+.21);
+  private vehicleSignal(x:number,z:number,facing:number){
+    const signal=new THREE.Group();signal.position.set(x,0,z);signal.rotation.y=facing;
+    this.box(.14,3.3,.14,0x405458,0,1.65,0,signal);this.box(.72,1.52,.34,0x263d40,0,3.45,0,signal);
+    const lamp=(y:number)=>this.ball(.2,0x44504a,0,y,.21,signal);
     this.vehicleSignals.push({red:lamp(3.92),amber:lamp(3.45),green:lamp(2.98)});
+    this.root.add(signal);
   }
   private showSignals(pedestrianGreen:boolean,vehicleMoving:boolean){
     const light=(mesh:THREE.Mesh,on:boolean,color:number)=>{const material=mesh.material as THREE.MeshStandardMaterial;material.color.setHex(on?color:0x44504a);material.emissive.setHex(on?color:0x000000);material.emissiveIntensity=on?.65:0;};
-    for(const [red,green] of [[this.redLamp,this.greenLamp],[this.sideRedLamp,this.sideGreenLamp]]){light(red,!pedestrianGreen,0xff443e);light(green,pedestrianGreen,0x61ff8f);}
-    this.pedestrianFigureMaterial.color.setHex(pedestrianGreen?0x66ff91:0x315f4e);this.pedestrianFigureMaterial.emissive.setHex(pedestrianGreen?0x35dd5f:0x000000);this.pedestrianFigureMaterial.emissiveIntensity=pedestrianGreen?.9:0;
+    for(const signal of this.pedestrianSignals){signal.red.visible=!pedestrianGreen;signal.green.visible=pedestrianGreen;}
     for(const signal of this.vehicleSignals){light(signal.red,!vehicleMoving,0xff443e);light(signal.amber,false,0xffc94d);light(signal.green,vehicleMoving,0x5de987);}
-    for(const figure of this.pedestrianFigures)figure.visible=pedestrianGreen;
     this.container.dataset.pedestrianSignal=pedestrianGreen?'green-man':'red';this.container.dataset.vehicleSignal=vehicleMoving?'green':'red';
   }
   tree(x:number,z:number,scale=1){const group=new THREE.Group();this.box(.35,2,.35,0x8b7354,0,1,0,group);this.ball(1.25,palette.green,0,2.8,0,group);this.ball(.9,0x609e72,.7,2.5,.1,group);group.position.set(x,0,z);group.scale.setScalar(scale);this.root.add(group);}
@@ -126,7 +138,7 @@ export class World {
     this.label('車行入口・學生止步',-6,1.2,-1.2,4);
     this.gate.position.set(1,0,-5);this.root.add(this.gate);for(let z=-1.2;z<=1.2;z+=.16){const link=new THREE.Mesh(new THREE.TorusGeometry(.11,.025,5,8),this.mat(palette.yellow));link.position.set(0,.95,z);link.rotation.y=Math.PI/2;this.gate.add(link);}this.label('指定登車口',-.4,2.1,-5,3);
     const guard=this.person(0xf1a758);guard.position.set(4,0,.2);this.root.add(guard);this.guardArm=this.box(.12,.8,.2,0xf1a758,.48,1.1,0,guard);this.label('導護站',4,2.5,.2,2.5);
-    this.box(.12,3,.12,0x3e5556,8,1.5,1);this.box(.65,1.2,.3,0x244d49,8,3,1);this.redLamp=this.ball(.2,0xe95b4e,8,3.3,1.2);this.greenLamp=this.ball(.2,0x2d8666,8,2.8,1.2);this.pedestrianFigure(8,2.78,1.43);this.vehicleSignal(10,7.45);
+    const mainSignals=signalPlacements.main;this.pedestrianSignal(mainSignals.pedestrian.x,mainSignals.pedestrian.z,mainSignals.pedestrian.facing);this.vehicleSignal(mainSignals.vehicle.x,mainSignals.vehicle.z,mainSignals.vehicle.facing);
     const adult=this.person(0xf1a758);adult.position.set(2.2,0,-6.5);this.root.add(adult);this.label('等成人放行',2.2,2.8,-7,3);
     for(let i=0;i<2;i++){const kid=this.person(i===0?palette.coral:palette.mint);kid.position.set(3,0,-3.1+i*1.3);this.root.add(kid);}
     this.passenger=this.person(palette.coral);this.root.add(this.passenger);
@@ -163,10 +175,7 @@ export class World {
     const sideGuard=this.person(0xf1a758);sideGuard.position.set(-33,0,-6);this.root.add(sideGuard);
     this.sideGuardArm=this.box(.12,.8,.2,0xf1a758,.48,1.1,0,sideGuard);
     this.label('側門導護站',-33,2.5,-6,3);
-    this.box(.12,3,.12,0x3e5556,-34,1.5,-6);
-    this.box(.65,1.2,.3,0x244d49,-34,3,-6);
-    this.sideRedLamp=this.ball(.2,0xe95b4e,-34,3.3,-5.8);
-    this.sideGreenLamp=this.ball(.2,0x2d8666,-34,2.8,-5.8);this.pedestrianFigure(-34,2.78,-5.55);this.vehicleSignal(-34.2,-4.4);
+    const sideSignals=signalPlacements.side;this.pedestrianSignal(sideSignals.pedestrian.x,sideSignals.pedestrian.z,sideSignals.pedestrian.facing);this.vehicleSignal(sideSignals.vehicle.x,sideSignals.vehicle.z,sideSignals.vehicle.facing);
     // Corner ramps and low-poly street furniture set the two-block walking scale.
     for(const x of [-33.5,38.5])for(const z of [-26,0]){const ramp=this.box(2.2,.1,1.8,0xe2d3b5,x,.02,z);ramp.rotation.x=z===0?.06:-.06;}
     for(const [x,z] of [[30,-17],[-48,-22],[54,-22],[-52,-29],[58,-29]]){this.box(5,3.8,4.8,0xdfd5bf,x,1.9,z);this.box(5.3,.28,5.1,0xb8c8b7,x,3.95,z);for(const wx of [-1.3,1.3])this.box(.9,1,.08,0x8db3bb,x+wx,2.6,z+2.45);}

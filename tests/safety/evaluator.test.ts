@@ -5,7 +5,7 @@ import {chainCollision,chainWalls,gateWall,intersects} from '../../src/safety/ch
 import {scenarios,validateScenario} from '../../src/data/scenarios';
 import {Journey} from '../../src/game/journey';
 import {Exploration,exploreSites,nearbySite} from '../../src/game/explore';
-import {campusParkingArea,campusWalls,crossings,crossesVehicleGate,frontRoad,hitsCampusWall,onPedestrianSpace,onMarkedCrosswalk} from '../../src/game/streetMap';
+import {campusParkingArea,campusWalls,crossings,crossesVehicleGate,frontRoad,hitsCampusWall,onPedestrianSpace,onMarkedCrosswalk,otherRoads,signalPlacements} from '../../src/game/streetMap';
 
 const evaluator=new SafetyRuleEvaluator();
 describe('Fail closed: every prerequisite is necessary',()=>{
@@ -34,6 +34,18 @@ describe('V2.4 scene data validation',()=>{
   it('the MRT journey requires walking to a station, entering, tapping, boarding and exiting',()=>{const mrt=scenarios.find(s=>s.mode==='mrt')!;const ids=new Journey(mrt).steps.map(s=>s.id);expect(ids.slice(0,5)).toEqual(['assembly','station','fareGate','identify','queue']);expect(ids).toContain('platform');expect(ids.indexOf('stationExit')).toBeGreaterThan(ids.indexOf('alight'));expect(ids.indexOf('walkToSchool')).toBeGreaterThan(ids.indexOf('stationExit'));});
   it('one map has all practice sites but blocks road and chain shortcuts',()=>{expect(exploreSites).toHaveLength(scenarios.length);const e=new Exploration();expect(nearbySite(e.position)?.scenario.id).toBe('walk');expect(e.move(1,0)).toBe(true);e.position={x:6,z:8};let blocked='';e.onResult=r=>{blocked=r.ruleId;};expect(e.move(0,-2)).toBe(false);expect(blocked).toBe('vehicleLane');e.position={x:3,z:-5};expect(e.move(-5,0)).toBe(false);expect(blocked).toBe('barrier');});
   it('the Fuxing North side approach begins in another block and has its own marked crossing',()=>{expect(crossings).toHaveLength(2);expect(crossings[1]).toMatchObject({x:-38,z:-8});const e=new Exploration();e.position={x:-43,z:-24};expect(nearbySite(e.position)?.scenario.id).toBe('walk_side');for(let z=-23;z<=-10;z++){expect(onPedestrianSpace({x:-43,z})).toBe(true);expect(e.move(0,1)).toBe(true);}expect(onMarkedCrosswalk({x:-38,z:-8})).toBe(true);expect(onMarkedCrosswalk({x:-38,z:4.5})).toBe(false);expect(e.move(5,0)).toBe(false);});
+  it('pedestrian figures face the waiting sides while vehicle lights stand across both roads',()=>{
+    const main=signalPlacements.main,side=signalPlacements.side;
+    expect(main.pedestrian.z).toBeGreaterThan(frontRoad.maxZ);
+    expect(main.vehicle.z).toBeLessThan(frontRoad.minZ);
+    expect(side.pedestrian.x).toBeLessThan(otherRoads[0].minX);
+    expect(side.vehicle.x).toBeGreaterThan(otherRoads[0].maxX);
+    for(const pair of [main,side]){
+      expect(onPedestrianSpace(pair.pedestrian)).toBe(true);
+      expect(onPedestrianSpace(pair.vehicle)).toBe(true);
+      expect(Math.hypot(pair.pedestrian.x-pair.vehicle.x,pair.pedestrian.z-pair.vehicle.z)).toBeGreaterThan(6);
+    }
+  });
   it('both school crossings go directly to the gate after pre-crossing safety checks',()=>{for(const id of ['walk','walk_side','guard','school_bus_gate_exterior','parent','parent_east','scooter_main']){const scenario=scenarios.find(s=>s.id===id)!;const j=new Journey(scenario);const ids=j.steps.map(step=>step.id);expect(ids.slice(ids.indexOf('stop'),ids.indexOf('destination')+1),id).toEqual(['stop','left','right','wait','cross','destination']);expect(ids).not.toContain('guard');}});
   it('side entrance requires its own crossing safety checks and ends on the campus side',()=>{const side=scenarios.find(s=>s.id==='walk_side')!;const j=new Journey(side);expect(j.steps.map(step=>step.id)).toEqual(['approachSide','stop','left','right','wait','cross','destination']);expect(j.steps[0].target).toEqual({x:-43,z:-10});expect(j.steps.at(-1)?.target).toEqual({x:-27,z:-8});j.position={x:-41,z:-8};expect(j.move(2,0)).toBe(false);expect(j.blocked?.ruleId).toBe('cross');});
   it('four perimeter sides block shortcuts while the small main and side gates stay open',()=>{

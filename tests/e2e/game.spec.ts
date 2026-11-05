@@ -118,6 +118,7 @@ for(const size of sizes){
         const button=(await page.locator('#interact').boundingBox())!;
         expect(button.x+button.width).toBeLessThanOrEqual(size.width);
         expect(button.height).toBeGreaterThanOrEqual(44);
+        if(size.width===390)await page.screenshot({path:'docs/screenshots/mobile-pedestrian-signal-390.png'});
       }
       await moveAndAct(page);
     }
@@ -208,7 +209,15 @@ test('side gate uses a separate crossing, guard and Blender street model',async(
   await start(page,'walk_side');expect(Number(await page.locator('#app').getAttribute('data-x'))).toBeLessThan(-40);expect(Number(await page.locator('#app').getAttribute('data-z'))).toBeLessThan(-20);
   const model=await page.request.get('/models/street_furniture.glb');expect(model.ok()).toBe(true);expect((await model.body()).byteLength).toBeGreaterThan(10000);
   mkdirSync('docs/screenshots',{recursive:true});await page.screenshot({path:'docs/screenshots/side-gate-1366.png'});
-  for(let i=0;i<8;i++)await moveAndAct(page);await expect(page.locator('#result')).toBeVisible();expect(errors).toEqual([]);
+  for(let i=0;i<8;i++){
+    if(await stage(page)==='wait'){
+      await expect(page.locator('#world')).toHaveAttribute('data-pedestrian-signal','green-man',{timeout:20000});
+      await expect(page.locator('#world')).toHaveAttribute('data-vehicle-signal','red');
+      await page.screenshot({path:'docs/screenshots/side-gate-signals-1366.png'});
+    }
+    await moveAndAct(page);
+  }
+  await expect(page.locator('#result')).toBeVisible();expect(errors).toEqual([]);
 });
 test('waiting on vehicle approach path is physically blocked',async({page})=>{
   await start(page,'school_bus_gate_exterior');await page.keyboard.down('ArrowUp');await expect(page.locator('#feedback')).toBeVisible({timeout:6000});await page.keyboard.up('ArrowUp');await expect(page.locator('#feedback-message')).toContainText('候車');expect(Number(await page.locator('#app').getAttribute('data-z'))).toBeGreaterThan(10.6);
