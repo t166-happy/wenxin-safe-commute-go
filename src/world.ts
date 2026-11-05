@@ -2,16 +2,17 @@ import * as THREE from 'three';
 import type {Journey} from './game/journey';
 import type {Point} from './safety/checkpoints';
 import {exploreSites} from './game/explore';
-import {crossings,signalPlacements} from './game/streetMap';
+import {crossings,frontRoad,otherRoads,signalPlacements} from './game/streetMap';
+import {crossingGuideRoutes,guideDirectionProgress,receivingTeacherProgress,type CrossingGuideId,type CrossingGuideRole,type GuideRoute} from './game/crossingGuides';
 import {GLTFLoader} from 'three/addons/loaders/GLTFLoader.js';
 const palette={grass:0x9bcba8,path:0xe5dcc7,road:0x536575,cream:0xfff2d3,green:0x386e59,mint:0x82bca3,coral:0xef8f71,yellow:0xffca59,blue:0x428cb4};
+interface GuideActor {crossing:CrossingGuideId;role:CrossingGuideRole;group:THREE.Group;arm:THREE.Mesh;legs:THREE.Mesh[];route:GuideRoute}
 export class World {
   scene=new THREE.Scene();camera=new THREE.PerspectiveCamera(43,1,.1,300);renderer:THREE.WebGLRenderer;
   root=new THREE.Group();avatar=new THREE.Group();vehicle=new THREE.Group();leadScooter=new THREE.Group();gate=new THREE.Group();marker=new THREE.Group();trafficCar=new THREE.Group();sideTrafficCar=new THREE.Group();passenger=new THREE.Group();improvement=new THREE.Group();exploreMarkers=new THREE.Group();landmarkVehicles=new THREE.Group();transportCabin=new THREE.Group();scooterCabin=new THREE.Group();parentCabin=new THREE.Group();
-  teacherArm!:THREE.Mesh;belt!:THREE.Mesh;parentBelt!:THREE.Mesh;helmet!:THREE.Mesh;stationRoof!:THREE.Mesh;
-  sideTeacherArm!:THREE.Mesh;
+  belt!:THREE.Mesh;parentBelt!:THREE.Mesh;helmet!:THREE.Mesh;stationRoof!:THREE.Mesh;
   private pedestrianSignals:{red:THREE.Group;green:THREE.Group}[]=[];private vehicleSignals:{red:THREE.Mesh;amber:THREE.Mesh;green:THREE.Mesh}[]=[];
-  yaw=.3;distance=25;overview=false;reduced=false;low=false;private focus=new THREE.Vector3(-3,0,-2);private ray=new THREE.Raycaster();private clock=0;private teacherWaveUntil={main:0,side:0};private lastMode='';private objects:THREE.Object3D[]=[];private readonly labels=new Set<THREE.Sprite>();private readonly labelPosition=new THREE.Vector3();private readonly mapFog=new THREE.Fog(0xe4f0ec,75,225);private readonly wheelOrigins=new WeakMap<THREE.Group,{x:number;z:number}>();
+  yaw=.3;distance=25;overview=false;reduced=false;low=false;private focus=new THREE.Vector3(-3,0,-2);private ray=new THREE.Raycaster();private clock=0;private teacherWaveUntil={main:0,side:0};private guides:GuideActor[]=[];private lastMode='';private objects:THREE.Object3D[]=[];private readonly labels=new Set<THREE.Sprite>();private readonly labelPosition=new THREE.Vector3();private readonly mapFog=new THREE.Fog(0xe4f0ec,75,225);private readonly wheelOrigins=new WeakMap<THREE.Group,{x:number;z:number}>();
   constructor(readonly container:HTMLElement){
     this.scene.background=new THREE.Color(0xe4f0ec);this.scene.fog=this.mapFog;
     this.renderer=new THREE.WebGLRenderer({antialias:true,alpha:false,powerPreference:'high-performance'});this.renderer.setPixelRatio(Math.min(devicePixelRatio,1.7));this.renderer.shadowMap.enabled=true;this.renderer.shadowMap.type=THREE.PCFShadowMap;this.renderer.outputColorSpace=THREE.SRGBColorSpace;container.append(this.renderer.domElement);this.renderer.domElement.setAttribute('aria-label','可移動角色的 3D 文欣校門教學示意場景');
@@ -45,7 +46,17 @@ export class World {
   label(text:string,x:number,y:number,z:number,width=4,parent:THREE.Object3D=this.root,bg='#fff8e6',fg='#234e43'){
     const canvas=document.createElement('canvas');canvas.width=768;canvas.height=160;const c=canvas.getContext('2d')!;c.fillStyle=bg;c.beginPath();c.roundRect(0,0,768,160,22);c.fill();c.fillStyle=fg;c.font='bold 62px "Microsoft JhengHei", sans-serif';c.textAlign='center';c.textBaseline='middle';c.fillText(text,384,82,730);const tex=new THREE.CanvasTexture(canvas);tex.colorSpace=THREE.SRGBColorSpace;const sprite=new THREE.Sprite(new THREE.SpriteMaterial({map:tex,depthTest:true}));sprite.position.set(x,y,z);sprite.scale.set(width,width*160/768,1);sprite.userData.labelText=text;sprite.visible=false;parent.add(sprite);this.labels.add(sprite);return sprite;
   }
-  person(color:number){const group=new THREE.Group();this.box(.55,.75,.4,color,0,.88,0,group);this.ball(.31,0xf6cfa8,0,1.55,0,group);this.ball(.33,0x483b33,0,1.72,-.04,group);this.box(.54,.12,.35,0x483b33,0,1.62,-.12,group);this.box(.2,.43,.24,0x354956,-.17,.28,0,group);this.box(.2,.43,.24,0x354956,.17,.28,0,group);this.box(.26,.12,.4,0xfff6df,-.17,.1,.06,group);this.box(.26,.12,.4,0xfff6df,.17,.1,.06,group);this.box(.46,.57,.22,palette.yellow,0,.95,-.3,group);this.box(.15,.62,.2,color,-.36,.9,0,group);this.box(.15,.62,.2,color,.36,.9,0,group);return group;}
+  person(color:number){const group=new THREE.Group();this.box(.55,.75,.4,color,0,.88,0,group);this.ball(.31,0xf6cfa8,0,1.55,0,group);this.ball(.33,0x483b33,0,1.72,-.04,group);this.box(.54,.12,.35,0x483b33,0,1.62,-.12,group);const leftLeg=this.box(.2,.43,.24,0x354956,-.17,.28,0,group);const rightLeg=this.box(.2,.43,.24,0x354956,.17,.28,0,group);group.userData.legs=[leftLeg,rightLeg];this.box(.26,.12,.4,0xfff6df,-.17,.1,.06,group);this.box(.26,.12,.4,0xfff6df,.17,.1,.06,group);this.box(.46,.57,.22,palette.yellow,0,.95,-.3,group);this.box(.15,.62,.2,color,-.36,.9,0,group);this.box(.15,.62,.2,color,.36,.9,0,group);return group;}
+  private addCrossingGuide(crossing:CrossingGuideId,role:CrossingGuideRole,label:string){
+    const route=crossingGuideRoutes[crossing][role];const color=role==='teacher'?0xf1a758:0x5dbb83;
+    const group=this.person(color);group.position.set(route.home.x,0,route.home.z);group.rotation.y=route.facing;
+    // Reflective front stripes distinguish adults from students without a real uniform or logo.
+    this.box(.48,.38,.035,role==='teacher'?0xffe49b:0xf8e36c,0,.96,.23,group);
+    this.box(.5,.07,.045,0xfff9e5,0,.95,.26,group);
+    const arm=this.box(.13,.78,.21,color,.48,1.08,0,group);
+    this.label(label,0,2.5,0,role==='teacher'?2.8:2.5,group);
+    this.root.add(group);this.guides.push({crossing,role,group,arm,legs:group.userData.legs as THREE.Mesh[],route});
+  }
   private pedestrianSignal(x:number,z:number,facing:number){
     const signal=new THREE.Group();signal.position.set(x,0,z);signal.rotation.y=facing;
     this.box(.12,3.25,.12,0x405458,0,1.625,0,signal);
@@ -137,7 +148,8 @@ export class World {
     for(const z of [-13.8,-1.4]){const width=z< -10?11:4;this.box(width,.28,.35,palette.green,1-width/2,.6,z);this.box(width,.28,.35,palette.green,1-width/2,1.05,z);}
     this.label('車行入口・學生止步',-6,1.2,-1.2,4);
     this.gate.position.set(1,0,-5);this.root.add(this.gate);for(let z=-1.2;z<=1.2;z+=.16){const link=new THREE.Mesh(new THREE.TorusGeometry(.11,.025,5,8),this.mat(palette.yellow));link.position.set(0,.95,z);link.rotation.y=Math.PI/2;this.gate.add(link);}this.label('指定登車口',-.4,2.1,-5,3);
-    const teacher=this.person(0xf1a758);teacher.position.set(4,0,.2);this.root.add(teacher);this.teacherArm=this.box(.12,.8,.2,0xf1a758,.48,1.1,0,teacher);this.label('老師／志工',4,2.5,.2,2.5);
+    this.addCrossingGuide('main','teacher','正門老師');
+    this.addCrossingGuide('main','volunteer','正門志工');
     const mainSignals=signalPlacements.main;this.pedestrianSignal(mainSignals.pedestrian.x,mainSignals.pedestrian.z,mainSignals.pedestrian.facing);this.vehicleSignal(mainSignals.vehicle.x,mainSignals.vehicle.z,mainSignals.vehicle.facing);
     const adult=this.person(0xf1a758);adult.position.set(2.2,0,-6.5);this.root.add(adult);this.label('等成人放行',2.2,2.8,-7,3);
     for(let i=0;i<2;i++){const kid=this.person(i===0?palette.coral:palette.mint);kid.position.set(3,0,-3.1+i*1.3);this.root.add(kid);}
@@ -172,9 +184,8 @@ export class World {
     for(const x of [-41.25,-34.75])this.box(.78,.045,2.7,0xf2ce64,x,.07,-8);
     this.box(9,.06,2.8,0xd4cfb8,-30.5,.04,-8);
     this.label('復興北路側門步道・教學示意',-29,2.3,-8,6);
-    const sideTeacher=this.person(0xf1a758);sideTeacher.position.set(-33,0,-6);this.root.add(sideTeacher);
-    this.sideTeacherArm=this.box(.12,.8,.2,0xf1a758,.48,1.1,0,sideTeacher);
-    this.label('側門老師／志工',-33,2.5,-6,3);
+    this.addCrossingGuide('side','teacher','側門老師');
+    this.addCrossingGuide('side','volunteer','側門志工');
     const sideSignals=signalPlacements.side;this.pedestrianSignal(sideSignals.pedestrian.x,sideSignals.pedestrian.z,sideSignals.pedestrian.facing);this.vehicleSignal(sideSignals.vehicle.x,sideSignals.vehicle.z,sideSignals.vehicle.facing);
     // Corner ramps and low-poly street furniture set the two-block walking scale.
     for(const x of [-33.5,38.5])for(const z of [-26,0]){const ramp=this.box(2.2,.1,1.8,0xe2d3b5,x,.02,z);ramp.rotation.x=z===0?.06:-.06;}
@@ -278,20 +289,44 @@ export class World {
   waveTeacher(side:boolean){this.teacherWaveUntil[side?'side':'main']=this.clock+2;}
   render(j:Journey|undefined,dt:number,explore?:Point,exploreTarget?:Point){
     this.clock+=dt;
-    this.teacherArm.rotation.z=this.teacherWaveUntil.main>this.clock?1.1+Math.sin(this.clock*14)*.2:0;
-    this.sideTeacherArm.rotation.z=this.teacherWaveUntil.side>this.clock?1.1+Math.sin(this.clock*14)*.2:0;
     const playerPosition=j?.position??explore;
     this.stationRoof.visible=!(playerPosition&&playerPosition.x>47&&playerPosition.x<57&&playerPosition.z>4.5&&playerPosition.z<12);
     if(!this.low&&Math.floor(this.clock)!==Math.floor(this.clock-dt))this.renderer.shadowMap.needsUpdate=true;
     this.exploreMarkers.visible=!j;
     this.landmarkVehicles.visible=!j;
     const phase=(j?.elapsed??this.clock)%18;const pedestrianGreen=!!j&&(!!j.facts.green||j.facts.crossing===true)||!j&&phase>=6&&phase<15;
+    const baseGuideProgress=guideDirectionProgress(phase,pedestrianGreen);
+    for(const guide of this.guides){
+      let progress=baseGuideProgress;
+      if(guide.role==='teacher'&&j&&!j.reverse&&(j.scenario.id==='walk_side'?'side':'main')===guide.crossing){
+        const road=guide.crossing==='side'?otherRoads[0]:frontRoad;
+        const fraction=guide.crossing==='side'?(j.position.x-road.minX)/(road.maxX-road.minX):(road.maxZ-j.position.z)/(road.maxZ-road.minZ);
+        if(j.facts.crossing===true||j.facts.crossed===true)progress=receivingTeacherProgress(progress,fraction,j.facts.crossed===true);
+      }
+      guide.group.position.set(guide.route.home.x+(guide.route.direct.x-guide.route.home.x)*progress,progress>0&&progress<1&&!this.reduced?Math.sin(this.clock*12)*.035:0,guide.route.home.z+(guide.route.direct.z-guide.route.home.z)*progress);
+      const waving=guide.role==='teacher'&&this.teacherWaveUntil[guide.crossing]>this.clock;
+      guide.arm.rotation.z=waving?1.1+Math.sin(this.clock*14)*.2:progress>.8?.9+Math.sin(this.clock*4)*.08:0;
+      const stride=progress>0&&progress<1&&!this.reduced?Math.sin(this.clock*11)*.28:0;
+      guide.legs[0].rotation.x=stride;guide.legs[1].rotation.x=-stride;
+    }
+    const mainTeacher=this.guides.find(guide=>guide.crossing==='main'&&guide.role==='teacher')!;
+    const mainVolunteer=this.guides.find(guide=>guide.crossing==='main'&&guide.role==='volunteer')!;
+    const sideTeacher=this.guides.find(guide=>guide.crossing==='side'&&guide.role==='teacher')!;
+    const sideVolunteer=this.guides.find(guide=>guide.crossing==='side'&&guide.role==='volunteer')!;
+    this.container.dataset.mainTeacherZ=mainTeacher.group.position.z.toFixed(2);
+    this.container.dataset.mainVolunteerZ=mainVolunteer.group.position.z.toFixed(2);
+    this.container.dataset.sideTeacherX=sideTeacher.group.position.x.toFixed(2);
+    this.container.dataset.sideVolunteerX=sideVolunteer.group.position.x.toFixed(2);
+    this.container.dataset.guides=baseGuideProgress>.8?'directing':baseGuideProgress>0?'walking':'sidewalk';
     this.showSignals(pedestrianGreen,!pedestrianGreen);
     const approachRemaining=(1-Math.min(phase/6,1))**2;
-    const mainCarX=pedestrianGreen?9.5:phase<6?9.5+8.5*approachRemaining:phase>=15?9.5-(phase-15)*8:9.5;
-    const sideCarZ=pedestrianGreen?-4:phase<6?-4+6*approachRemaining:phase>=15?-4-(phase-15)*7:-4;
+    // Leave a visible buffer between stopped traffic, guides, and each crosswalk.
+    const mainStopX=12.5,sideStopZ=-2.5;
+    const mainCarX=pedestrianGreen?mainStopX:phase<6?mainStopX+8.5*approachRemaining:phase>=15?mainStopX-(phase-15)*8:mainStopX;
+    const sideCarZ=pedestrianGreen?sideStopZ:phase<6?sideStopZ+6*approachRemaining:phase>=15?sideStopZ-(phase-15)*7:sideStopZ;
     this.trafficCar.position.set(mainCarX,0,4.5);this.trafficCar.rotation.y=-Math.PI/2;
     this.sideTrafficCar.position.set(-38,0,sideCarZ);this.sideTrafficCar.rotation.y=Math.PI;
+    this.container.dataset.mainCarX=mainCarX.toFixed(2);this.container.dataset.sideCarZ=sideCarZ.toFixed(2);
     this.rollVehicle(this.trafficCar,dt);this.rollVehicle(this.sideTrafficCar,dt);
     const intersectionBraking=pedestrianGreen||phase>=4.5&&phase<6;
     this.setBrakes(this.trafficCar,intersectionBraking);this.setBrakes(this.sideTrafficCar,intersectionBraking);

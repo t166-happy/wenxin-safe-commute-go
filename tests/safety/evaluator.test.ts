@@ -6,6 +6,7 @@ import {scenarios,validateScenario} from '../../src/data/scenarios';
 import {Journey} from '../../src/game/journey';
 import {Exploration,exploreSites,nearbySite} from '../../src/game/explore';
 import {campusParkingArea,campusWalls,crossings,crossesVehicleGate,frontRoad,hitsCampusWall,onPedestrianSpace,onMarkedCrosswalk,otherRoads,signalPlacements} from '../../src/game/streetMap';
+import {crossingGuideRoutes,guideDirectionProgress,receivingTeacherProgress} from '../../src/game/crossingGuides';
 
 const evaluator=new SafetyRuleEvaluator();
 describe('Fail closed: every prerequisite is necessary',()=>{
@@ -45,6 +46,19 @@ describe('V2.4 scene data validation',()=>{
       expect(onPedestrianSpace(pair.vehicle)).toBe(true);
       expect(Math.hypot(pair.pedestrian.x-pair.vehicle.x,pair.pedestrian.z-pair.vehicle.z)).toBeGreaterThan(6);
     }
+  });
+  it('teachers and volunteers direct from both ends only during the protected crossing interval',()=>{
+    for(const pair of Object.values(crossingGuideRoutes))for(const route of Object.values(pair)){
+      expect(onPedestrianSpace(route.home)).toBe(true);
+      expect(onMarkedCrosswalk(route.direct)).toBe(false); // adults flank the student corridor
+    }
+    for(const phase of [0,5.99,15,17.9])expect(guideDirectionProgress(phase,false)).toBe(0);
+    expect(guideDirectionProgress(7.5,true)).toBe(1);
+    expect(guideDirectionProgress(13.2,true)).toBe(1);
+    expect(guideDirectionProgress(15,true)).toBe(0);
+    expect(receivingTeacherProgress(1,.7,false)).toBeCloseTo(.5);
+    expect(receivingTeacherProgress(1,1,false)).toBe(0);
+    expect(receivingTeacherProgress(1,.3,true)).toBe(0);
   });
   it('both school crossings go directly to the gate after pre-crossing safety checks',()=>{for(const id of ['walk','walk_side','school_bus_gate_exterior','parent','parent_east','scooter_main']){const scenario=scenarios.find(s=>s.id===id)!;const j=new Journey(scenario);const ids=j.steps.map(step=>step.id);expect(ids.slice(ids.indexOf('stop'),ids.indexOf('destination')+1),id).toEqual(['stop','left','right','wait','cross','destination']);expect(ids).not.toContain('guard');}});
   it('teacher greeting becomes available only after reaching the opposite sidewalk',()=>{

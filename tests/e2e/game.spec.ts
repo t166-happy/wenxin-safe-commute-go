@@ -23,13 +23,27 @@ test('main and side crossing show a green walking figure only while cars stop',a
   await page.setViewportSize({width:1366,height:768});await start(page);
   await expect(page.locator('#world')).toHaveAttribute('data-pedestrian-signal','red');
   await expect(page.locator('#world')).toHaveAttribute('data-vehicle-signal','green');
+  await expect(page.locator('#world')).toHaveAttribute('data-guides','sidewalk');
+  expect(Number(await page.locator('#world').getAttribute('data-main-teacher-z'))).toBeCloseTo(.2,1);
+  expect(Number(await page.locator('#world').getAttribute('data-side-volunteer-x'))).toBeCloseTo(-42.7,1);
   await expect(page.locator('#status-banner')).toContainText('行人紅燈');
   await expect(page.locator('#world')).toHaveAttribute('data-pedestrian-signal','green-man',{timeout:20000});
   await expect(page.locator('#world')).toHaveAttribute('data-vehicle-signal','red');
   await expect(page.locator('#world')).toHaveAttribute('data-main-car','stopped');
   await expect(page.locator('#world')).toHaveAttribute('data-side-car','stopped');
+  expect(Number(await page.locator('#world').getAttribute('data-main-car-x'))).toBeGreaterThan(11);
+  expect(Number(await page.locator('#world').getAttribute('data-side-car-z'))).toBeGreaterThan(-3);
   await expect(page.locator('#status-banner')).toContainText('小綠人亮起');
+  await expect(page.locator('#world')).toHaveAttribute('data-guides','directing',{timeout:5000});
+  await expect.poll(async()=>Number(await page.locator('#world').getAttribute('data-main-teacher-z'))).toBeCloseTo(4.5,1);
+  expect(Number(await page.locator('#world').getAttribute('data-main-volunteer-z'))).toBeCloseTo(4.5,1);
+  expect(Number(await page.locator('#world').getAttribute('data-side-teacher-x'))).toBeCloseTo(-38,1);
+  expect(Number(await page.locator('#world').getAttribute('data-side-volunteer-x'))).toBeCloseTo(-38,1);
   mkdirSync('docs/screenshots',{recursive:true});await page.screenshot({path:'docs/screenshots/green-man-crossing-1366.png'});
+  await page.screenshot({path:'docs/screenshots/guides-directing-main-1366.png'});
+  await expect(page.locator('#world')).toHaveAttribute('data-pedestrian-signal','red',{timeout:13000});
+  await expect(page.locator('#world')).toHaveAttribute('data-guides','sidewalk');
+  expect(Number(await page.locator('#world').getAttribute('data-main-teacher-z'))).toBeCloseTo(.2,1);
 });
 test('3D wheels rotate with road traffic and scooters, then stop with brake lights',async({page})=>{
   await page.setViewportSize({width:1366,height:768});await page.goto('/');await page.locator('#start').click();
@@ -245,7 +259,8 @@ test('side gate uses a separate crossing, teacher and Blender street model',asyn
     if(await stage(page)==='wait'){
       await expect(page.locator('#world')).toHaveAttribute('data-pedestrian-signal','green-man',{timeout:20000});
       await expect(page.locator('#world')).toHaveAttribute('data-vehicle-signal','red');
-      await page.screenshot({path:'docs/screenshots/side-gate-signals-1366.png'});
+      await expect(page.locator('#world')).toHaveAttribute('data-guides','directing',{timeout:20000});
+      await page.screenshot({path:'docs/screenshots/guides-directing-side-1366.png'});
     }
     await moveAndAct(page);
   }

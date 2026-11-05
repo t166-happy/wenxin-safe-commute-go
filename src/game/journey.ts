@@ -2,6 +2,7 @@ import {SafetyRuleEvaluator,type Evaluation,type Facts} from '../safety/evaluato
 import {chainCollision,intersects,type Point,type Box} from '../safety/checkpoints';
 import type {Scenario} from '../data/scenarios';
 import {campusParkingArea,crossesVehicleGate,crossings,frontRoad,hitsCampusWall,onMarkedCrosswalk,onPedestrianSpace,otherRoads} from './streetMap';
+import {crossingGuideRoutes} from './crossingGuides';
 export interface Step {id:string;label:string;action:string;verb:string;target:Point;rule:string;tip:string}
 const p=(x:number,z:number):Point=>({x,z});
 const step=(id:string,label:string,action:string,verb:string,target:Point,rule='approach',tip='走到金色標記旁，按互動鍵。'):Step=>({id,label,action,verb,target,rule,tip});
@@ -82,7 +83,7 @@ export class Journey {
   }
   get teacherNearby(){
     if(this.reverse||!this.hasCrossedRoad)return false;
-    const teacher=this.scenario.id==='walk_side'?p(-33,-6):p(4,.2);
+    const teacher=crossingGuideRoutes[this.scenario.id==='walk_side'?'side':'main'].teacher.home;
     return Math.hypot(this.position.x-teacher.x,this.position.z-teacher.z)<3.6;
   }
   get assistedTarget():Point{
