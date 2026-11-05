@@ -8,10 +8,10 @@ const palette={grass:0x9bcba8,path:0xe5dcc7,road:0x536575,cream:0xfff2d3,green:0
 export class World {
   scene=new THREE.Scene();camera=new THREE.PerspectiveCamera(43,1,.1,300);renderer:THREE.WebGLRenderer;
   root=new THREE.Group();avatar=new THREE.Group();vehicle=new THREE.Group();leadScooter=new THREE.Group();gate=new THREE.Group();marker=new THREE.Group();trafficCar=new THREE.Group();sideTrafficCar=new THREE.Group();passenger=new THREE.Group();improvement=new THREE.Group();exploreMarkers=new THREE.Group();landmarkVehicles=new THREE.Group();transportCabin=new THREE.Group();scooterCabin=new THREE.Group();parentCabin=new THREE.Group();
-  guardArm!:THREE.Mesh;belt!:THREE.Mesh;parentBelt!:THREE.Mesh;helmet!:THREE.Mesh;stationRoof!:THREE.Mesh;
-  sideGuardArm!:THREE.Mesh;
+  teacherArm!:THREE.Mesh;belt!:THREE.Mesh;parentBelt!:THREE.Mesh;helmet!:THREE.Mesh;stationRoof!:THREE.Mesh;
+  sideTeacherArm!:THREE.Mesh;
   private pedestrianSignals:{red:THREE.Group;green:THREE.Group}[]=[];private vehicleSignals:{red:THREE.Mesh;amber:THREE.Mesh;green:THREE.Mesh}[]=[];
-  yaw=.3;distance=25;overview=false;reduced=false;low=false;private focus=new THREE.Vector3(-3,0,-2);private ray=new THREE.Raycaster();private clock=0;private lastMode='';private objects:THREE.Object3D[]=[];private readonly labels=new Set<THREE.Sprite>();private readonly labelPosition=new THREE.Vector3();private readonly mapFog=new THREE.Fog(0xe4f0ec,75,225);private readonly wheelOrigins=new WeakMap<THREE.Group,{x:number;z:number}>();
+  yaw=.3;distance=25;overview=false;reduced=false;low=false;private focus=new THREE.Vector3(-3,0,-2);private ray=new THREE.Raycaster();private clock=0;private teacherWaveUntil={main:0,side:0};private lastMode='';private objects:THREE.Object3D[]=[];private readonly labels=new Set<THREE.Sprite>();private readonly labelPosition=new THREE.Vector3();private readonly mapFog=new THREE.Fog(0xe4f0ec,75,225);private readonly wheelOrigins=new WeakMap<THREE.Group,{x:number;z:number}>();
   constructor(readonly container:HTMLElement){
     this.scene.background=new THREE.Color(0xe4f0ec);this.scene.fog=this.mapFog;
     this.renderer=new THREE.WebGLRenderer({antialias:true,alpha:false,powerPreference:'high-performance'});this.renderer.setPixelRatio(Math.min(devicePixelRatio,1.7));this.renderer.shadowMap.enabled=true;this.renderer.shadowMap.type=THREE.PCFShadowMap;this.renderer.outputColorSpace=THREE.SRGBColorSpace;container.append(this.renderer.domElement);this.renderer.domElement.setAttribute('aria-label','可移動角色的 3D 文欣校門教學示意場景');
@@ -137,7 +137,7 @@ export class World {
     for(const z of [-13.8,-1.4]){const width=z< -10?11:4;this.box(width,.28,.35,palette.green,1-width/2,.6,z);this.box(width,.28,.35,palette.green,1-width/2,1.05,z);}
     this.label('車行入口・學生止步',-6,1.2,-1.2,4);
     this.gate.position.set(1,0,-5);this.root.add(this.gate);for(let z=-1.2;z<=1.2;z+=.16){const link=new THREE.Mesh(new THREE.TorusGeometry(.11,.025,5,8),this.mat(palette.yellow));link.position.set(0,.95,z);link.rotation.y=Math.PI/2;this.gate.add(link);}this.label('指定登車口',-.4,2.1,-5,3);
-    const guard=this.person(0xf1a758);guard.position.set(4,0,.2);this.root.add(guard);this.guardArm=this.box(.12,.8,.2,0xf1a758,.48,1.1,0,guard);this.label('導護站',4,2.5,.2,2.5);
+    const teacher=this.person(0xf1a758);teacher.position.set(4,0,.2);this.root.add(teacher);this.teacherArm=this.box(.12,.8,.2,0xf1a758,.48,1.1,0,teacher);this.label('老師／志工',4,2.5,.2,2.5);
     const mainSignals=signalPlacements.main;this.pedestrianSignal(mainSignals.pedestrian.x,mainSignals.pedestrian.z,mainSignals.pedestrian.facing);this.vehicleSignal(mainSignals.vehicle.x,mainSignals.vehicle.z,mainSignals.vehicle.facing);
     const adult=this.person(0xf1a758);adult.position.set(2.2,0,-6.5);this.root.add(adult);this.label('等成人放行',2.2,2.8,-7,3);
     for(let i=0;i<2;i++){const kid=this.person(i===0?palette.coral:palette.mint);kid.position.set(3,0,-3.1+i*1.3);this.root.add(kid);}
@@ -172,9 +172,9 @@ export class World {
     for(const x of [-41.25,-34.75])this.box(.78,.045,2.7,0xf2ce64,x,.07,-8);
     this.box(9,.06,2.8,0xd4cfb8,-30.5,.04,-8);
     this.label('復興北路側門步道・教學示意',-29,2.3,-8,6);
-    const sideGuard=this.person(0xf1a758);sideGuard.position.set(-33,0,-6);this.root.add(sideGuard);
-    this.sideGuardArm=this.box(.12,.8,.2,0xf1a758,.48,1.1,0,sideGuard);
-    this.label('側門導護站',-33,2.5,-6,3);
+    const sideTeacher=this.person(0xf1a758);sideTeacher.position.set(-33,0,-6);this.root.add(sideTeacher);
+    this.sideTeacherArm=this.box(.12,.8,.2,0xf1a758,.48,1.1,0,sideTeacher);
+    this.label('側門老師／志工',-33,2.5,-6,3);
     const sideSignals=signalPlacements.side;this.pedestrianSignal(sideSignals.pedestrian.x,sideSignals.pedestrian.z,sideSignals.pedestrian.facing);this.vehicleSignal(sideSignals.vehicle.x,sideSignals.vehicle.z,sideSignals.vehicle.facing);
     // Corner ramps and low-poly street furniture set the two-block walking scale.
     for(const x of [-33.5,38.5])for(const z of [-26,0]){const ramp=this.box(2.2,.1,1.8,0xe2d3b5,x,.02,z);ramp.rotation.x=z===0?.06:-.06;}
@@ -275,8 +275,11 @@ export class World {
   }
   resize(){const {clientWidth:w,clientHeight:h}=this.container;this.camera.aspect=w/h;this.camera.updateProjectionMatrix();this.renderer.setSize(w,h,false);}
   pick(clientX:number,clientY:number):{action?:string;correctSeat?:boolean;target?:boolean;vehicle?:boolean}{const rect=this.renderer.domElement.getBoundingClientRect();this.ray.setFromCamera(new THREE.Vector2((clientX-rect.left)/rect.width*2-1,-(clientY-rect.top)/rect.height*2+1),this.camera);const hits=this.ray.intersectObjects(this.scene.children,true);for(const hit of hits){let obj:THREE.Object3D|null=hit.object;while(obj){if(obj.userData.action||obj.userData.target||obj.userData.vehicle)return obj.userData;obj=obj.parent;}if(hit.object instanceof THREE.Mesh)break;}return {};}
+  waveTeacher(side:boolean){this.teacherWaveUntil[side?'side':'main']=this.clock+2;}
   render(j:Journey|undefined,dt:number,explore?:Point,exploreTarget?:Point){
     this.clock+=dt;
+    this.teacherArm.rotation.z=this.teacherWaveUntil.main>this.clock?1.1+Math.sin(this.clock*14)*.2:0;
+    this.sideTeacherArm.rotation.z=this.teacherWaveUntil.side>this.clock?1.1+Math.sin(this.clock*14)*.2:0;
     const playerPosition=j?.position??explore;
     this.stationRoof.visible=!(playerPosition&&playerPosition.x>47&&playerPosition.x<57&&playerPosition.z>4.5&&playerPosition.z<12);
     if(!this.low&&Math.floor(this.clock)!==Math.floor(this.clock-dt))this.renderer.shadowMap.needsUpdate=true;
@@ -316,7 +319,6 @@ export class World {
       this.container.dataset.scooterLeadX=lead?this.leadScooter.position.x.toFixed(2):'';
       this.container.dataset.scooterLeadWheelAngle=this.wheelAngle(this.leadScooter);
       this.gate.visible=!j.gateOpen;
-      const yielded=!!j.facts.trafficYielded||j.facts.crossing===true;this.guardArm.rotation.z=yielded?1.4:0;this.sideGuardArm.rotation.z=yielded?1.4:0;
       this.passenger.position.set(j.scenario.mode==='after_school_shuttle'?3:j.scenario.start.x+1,0,j.scenario.mode==='after_school_shuttle'?-6.7:j.scenario.mode==='scooter'?j.scenario.start.z:11);this.passenger.visible=j.queueAt!==null&&!j.facts.studentTurn;
       const target=j.current?.target??j.position;this.marker.visible=!j.complete&&!scooterInside&&!parentArrival;this.marker.position.set(target.x,0,target.z);this.marker.rotation.y=this.reduced?0:this.clock*.5;
       this.improvement.visible=j.scenario.mode==='human'&&j.index>=3;

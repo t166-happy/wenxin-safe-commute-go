@@ -12,13 +12,13 @@ function walking(reverse=false,x:number=crossings[0].x):Step[]{
     step('left','看看左方來車','left','👀 看左方',p(reverse?-33:-41.5,z)),step('right','看看右方與轉彎車','right','👀 看右方',p(reverse?-33:-41.5,z)),
     step('wait','確認行人號誌燈號','wait','🚦 確認行人號誌燈號',p(reverse?-33:-41.5,z),'cross','看行人號誌是否亮起小綠人；確認車輛停讓後再按互動。'),
     step('cross','沿復興北路斑馬線走到對面','cross','🚶 完成穿越',p(reverse?-42:-35,z),'cross'),
-    step('destination',reverse?'安全抵達復興北路示意街區':'沿側門步道進入校園','finish','🏁 抵達',p(reverse?-43:-27,reverse?-18:z))
+    step('destination',reverse?'安全抵達復興北路示意街區':'經過老師／志工，沿側門步道入校','finish','🏁 抵達',p(reverse?-43:-27,reverse?-18:z),'approach',reverse?'沿人行步道前進。':'經過老師／志工時可按「問好」，沿步道直接入校。')
   ];}
   const edge=reverse?.6:8.7,end=reverse?8.7:.6;
-  return [step('stop','在路口安全區停下','stop','✋ 停步',p(x,edge),'approach','鬆開移動鍵，停在路緣的金色圓圈。'),step('left','看看左方來車','left','👀 看左方',p(x,edge)),step('right','看看右方與轉彎車','right','👀 看右方',p(x,edge)),step('wait','確認行人號誌燈號','wait','🚦 確認行人號誌燈號',p(x,edge),'cross','看行人號誌是否亮起小綠人；確認車輛停讓後再按互動。'),step('cross','沿斑馬線走到對面','cross','🚶 完成穿越',p(x,end),'cross'),step('destination',reverse?'安全抵達示意街角':'沿左側步道進入校門','finish','🏁 抵達',p(x,reverse?12:-10))];
+  return [step('stop','在路口安全區停下','stop','✋ 停步',p(x,edge),'approach','鬆開移動鍵，停在路緣的金色圓圈。'),step('left','看看左方來車','left','👀 看左方',p(x,edge)),step('right','看看右方與轉彎車','right','👀 看右方',p(x,edge)),step('wait','確認行人號誌燈號','wait','🚦 確認行人號誌燈號',p(x,edge),'cross','看行人號誌是否亮起小綠人；確認車輛停讓後再按互動。'),step('cross','沿斑馬線走到對面','cross','🚶 完成穿越',p(x,end),'cross'),step('destination',reverse?'安全抵達示意街角':'經過老師／志工，沿左側步道入校','finish','🏁 抵達',p(x,reverse?12:-10),'approach',reverse?'沿人行步道前進。':'經過老師／志工時可按「問好」，沿步道直接入校。')];
 }
 export function makeSteps(s:Scenario,reverse:boolean):Step[]{
-  if(s.mode==='walk'||s.mode==='guard')return walking(reverse,s.id==='walk_side'?crossings[1].x:crossings[0].x);
+  if(s.mode==='walk')return walking(reverse,s.id==='walk_side'?crossings[1].x:crossings[0].x);
   if(s.mode==='human')return [step('observe','觀察狹窄步道，收集風險證據','observe','🔎 標記風險',p(6,-7)),step('stakeholder','留意輪椅與推車的需要','stakeholder','♿ 關心用路人',p(6,-7)),step('place','將改善設施放到金色位置','place','🌱 放置坡道',p(6,-4),'improve','將坡道圖卡拖到 3D 金色圓圈，或到圈旁按互動。'),step('compare','觀察改善前後通行空間','compare','↔ 比較前後',p(6,-4)),step('proposal','以圖卡保存改善建議','proposal','📋 保存提案',p(6,-4))];
   if(s.mode==='parent'){
     const seat=p(130,-1),sidewalk=p(s.stop!.x-3.5,11.4);
@@ -67,15 +67,24 @@ export function makeSteps(s:Scenario,reverse:boolean):Step[]{
 }
 export class Journey {
   readonly evaluator=new SafetyRuleEvaluator();
-  steps:Step[];index=0;position:Point;checkpoint:Point;facts:Facts={};elapsed=0;stoppedFor=0;queueAt:number|null=null;rideAt:number|null=null;departAt:number|null=null;
+  steps:Step[];index=0;position:Point;checkpoint:Point;facts:Facts={};elapsed=0;stoppedFor=0;queueAt:number|null=null;rideAt:number|null=null;departAt:number|null=null;teacherGreeted=false;
   blocked:Evaluation|null=null;complete=false;vehicleProgress=0;onResult?:(r:Evaluation)=>void;
   obstacles:Box[]=[];
   constructor(readonly scenario:Scenario,readonly reverse=false){
-    this.steps=makeSteps(scenario,reverse);this.position={...(scenario.mode==='parent'?p(130,-1):scenario.mode==='scooter'?p(120,-1):reverse&&(scenario.mode==='walk'||scenario.mode==='guard')?scenario.id==='walk_side'?p(-27,-8):p(this.crossingX,-10):scenario.start)};this.checkpoint={...this.position};
+    this.steps=makeSteps(scenario,reverse);this.position={...(scenario.mode==='parent'?p(130,-1):scenario.mode==='scooter'?p(120,-1):reverse&&scenario.mode==='walk'?scenario.id==='walk_side'?p(-27,-8):p(this.crossingX,-10):scenario.start)};this.checkpoint={...this.position};
     const arriving=scenario.mode==='parent'||scenario.mode==='scooter';
     this.facts={safePlace:true,boundaryClear:true,behindLine:true,doorNotClosing:true,correctDirection:false,vehicleCorrect:false,adultCleared:false,studentTurn:false,crossingConflictFree:false,vehicleStopped:false,doorOpen:false,safeSide:true,safeStop:arriving,rearTrafficClear:false,motorcycleTurn:false,rearChecked:!arriving,unbuckled:!arriving,buckled:scenario.mode==='parent',helmeted:scenario.mode==='scooter',feetOnFootrests:scenario.mode==='scooter',seated:arriving,doorClosed:false,clearOfBlindSpot:!arriving,accessible:true,emergencyClear:true,sightClear:true};
   }
   get current(){return this.steps[this.index];}
+  get hasCrossedRoad(){
+    if(this.current?.id!=='destination'||this.steps[this.index-1]?.id!=='cross')return false;
+    return this.scenario.id==='walk_side'?this.position.x>otherRoads[0].maxX:this.position.z<frontRoad.minZ;
+  }
+  get teacherNearby(){
+    if(this.reverse||!this.hasCrossedRoad)return false;
+    const teacher=this.scenario.id==='walk_side'?p(-33,-6):p(4,.2);
+    return Math.hypot(this.position.x-teacher.x,this.position.z-teacher.z)<3.6;
+  }
   get assistedTarget():Point{
     // After leaving the main-gate scooter, follow the sidewalk behind its stopping bay.
     // Walking straight to the crossing would cut through the vehicle approach area.
@@ -103,8 +112,6 @@ export class Journey {
     this.facts.green=this.signal||this.facts.crossing===true;this.facts.trafficYielded=this.yielded||this.facts.crossing===true;
     this.facts.rearTrafficClear=this.elapsed%20>=4&&this.elapsed%20<19;
     if(this.scenario.mode==='scooter')this.facts.motorcycleTurn=this.elapsed>=3;
-    const walk=this.scenario.mode==='walk'||this.scenario.mode==='guard'||this.current?.id==='wait'||this.current?.id==='cross';
-    if(walk)this.facts.adultCleared=this.yielded||this.facts.crossing===true;
     if(this.rideAt!==null){
       const arrived=this.elapsed-this.rideAt>=5&&(this.scenario.mode!=='bus'&&this.scenario.mode!=='transfer'||this.facts.bell===true);
       this.facts.vehicleStopped=arrived;this.facts.doorOpen=arrived;this.facts.crossingConflictFree=arrived;
@@ -120,7 +127,14 @@ export class Journey {
   attempt(action:string,overrides:Facts={}):boolean{
     if(this.blocked||this.complete)return false;
     const safePlace=this.inside?this.facts.vehicleStopped===true:(this.position.x< -35||this.position.x>70||this.position.z<1.7||this.position.z>7.3);
-    if(action==='greet'){return this.evaluate('courtesy',{safePlace,...overrides}).allowed;}
+    if(action==='greet'){
+      if(!this.reverse&&this.current?.id==='destination'&&this.steps[this.index-1]?.id==='cross'){
+        const allowed=this.evaluate('teacherGreet',{...overrides,crossed:this.hasCrossedRoad,nearTeacher:this.teacherNearby,safePlace}).allowed;
+        if(allowed)this.teacherGreeted=true;
+        return allowed;
+      }
+      return this.evaluate('courtesy',{safePlace,...overrides}).allowed;
+    }
     if(action==='help')return this.evaluate('help',{safePlace:this.inside?!!this.facts.seated&&(!!this.facts.buckled||!!this.facts.holdingRail||this.scenario.mode==='scooter'&&!!this.facts.helmeted&&!!this.facts.feetOnFootrests):safePlace}).allowed;
     const current=this.current;if(!current)return false;
     const near=Math.hypot(this.position.x-current.target.x,this.position.z-current.target.z)<1.4;
@@ -134,7 +148,7 @@ export class Journey {
     if(action==='rail')extras.holdingRail=true;
     if(action==='clearance')extras.adultCleared=true;
     if(action==='wait'||action==='cross')extras.onCrosswalk=this.scenario.id==='walk_side'?Math.abs(this.position.z-crossings[1].z)<1.2:Math.abs(this.position.x-this.crossingX)<1.2;
-    if(action==='cross'&&this.facts.crossed){extras.green=true;extras.trafficYielded=true;extras.adultCleared=true;}
+    if(action==='cross'&&this.facts.crossed){extras.green=true;extras.trafficYielded=true;}
     if(!this.evaluate(current.rule,extras).allowed)return false;
     if(action==='stop'){this.facts.stopped=true;this.facts.crossed=false;}
     if(action==='left')this.facts.lookLeft=true;
@@ -193,7 +207,7 @@ export class Journey {
         const inMark=this.scenario.id==='walk_side'?road===otherRoads[0]&&Math.abs(to.z-crossings[1].z)<1.2&&Math.abs(this.position.z-crossings[1].z)<1.2:road===frontRoad&&Math.abs(to.x-this.crossingX)<1.2&&Math.abs(this.position.x-this.crossingX)<1.2;
         // Once crossing safely starts, traffic remains yielding until player reaches the opposite curb.
         const crossing=this.facts.crossing===true;
-        const result=this.evaluator.evaluate('cross',{...this.facts,onCrosswalk:inMark,...(crossing?{green:true,trafficYielded:true,adultCleared:true}:{})},this.current?.id);
+        const result=this.evaluator.evaluate('cross',{...this.facts,onCrosswalk:inMark,...(crossing?{green:true,trafficYielded:true}:{})},this.current?.id);
         if(!result.allowed){this.onResult?.(result);this.blocked=result;return false;}if(!crossing)this.onResult?.(result);this.facts.crossing=true;
       }else if(this.facts.crossing){this.facts.crossing=false;this.facts.crossed=true;}
     }

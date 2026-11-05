@@ -7,7 +7,6 @@ export interface ExploreSite {scenario:Scenario;entry:Point;area:string}
 const entries:Record<string,{entry:Point;area:string}>={
   walk:{entry:{x:6,z:10.5},area:'校門外行人空間'},
   walk_side:{entry:{x:-43,z:-24},area:'復興北路外側街區・側門步行示意'},
-  guard:{entry:{x:4,z:-1},area:'導護站'},
   after_school_shuttle_courtyard:{entry:{x:5,z:-9},area:'校內接駁廣場'},
   school_bus_gate_exterior:{entry:{x:28,z:11},area:'校門東側校車示意區'},
   mrt:{entry:{x:53,z:11},area:'A8 方向捷運示意站'},

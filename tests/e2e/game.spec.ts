@@ -8,7 +8,7 @@ for(const size of sizes){
     expect(await page.locator('canvas').evaluate(e=>(e as HTMLCanvasElement).width)).toBeGreaterThan(0);
     expect(await page.evaluate(()=>document.documentElement.scrollWidth>innerWidth)).toBe(false);
     mkdirSync('docs/screenshots',{recursive:true});await page.screenshot({path:`docs/screenshots/map-${size.width}.png`});
-    await page.locator('#missions').click();await page.locator('[data-place="school_bus_gate_exterior"]').click();
+    await page.locator('#missions').click();await expect(page.locator('[data-place="guard"]')).toHaveCount(0);await page.locator('[data-place="school_bus_gate_exterior"]').click();
     expect(Number(await page.locator('#app').getAttribute('data-x'))).toBeGreaterThan(20);
     await page.locator('#missions').click();await page.locator('[data-place="parent"]').click();
     expect(Number(await page.locator('#app').getAttribute('data-x'))).toBeLessThan(-15);
@@ -92,7 +92,7 @@ async function moveAndAct(page:Page,touch=false){
   throw new Error(`Repeated crossing signal change at ${before}`);
 }
 for(const scene of ['walk','walk_side'])test(`${scene} enters school directly after crossing`,async({page})=>{
-  await start(page,scene);
+  await page.setViewportSize({width:1366,height:768});await start(page,scene);
   let count=0;while(await stage(page)!=='cross'&&count++<7){
     if(await stage(page)==='wait'){
       await expect(page.locator('#objective')).toHaveText('確認行人號誌燈號');
@@ -105,6 +105,12 @@ for(const scene of ['walk','walk_side'])test(`${scene} enters school directly af
   await expect(page.locator('#app')).toHaveAttribute('data-stage','destination');
   await expect(page.locator('#status-banner')).toContainText('沿人行步道直接入校');
   await expect(page.locator('#signal')).toHaveText('🏫 直接入校');
+  await expect(page.locator('#greet')).toHaveText('👋 向老師／志工問好');
+  await page.locator('#greet').click();
+  await expect(page.locator('#toast')).toContainText('早安');
+  await expect(page.locator('#greet')).toHaveText('✓ 已向老師問好');
+  await expect(page.locator('#app')).toHaveAttribute('data-stage','destination');
+  mkdirSync('docs/screenshots',{recursive:true});await page.screenshot({path:`docs/screenshots/teacher-greeting-${scene}-1366.png`});
   await press(page,'#assist');
   await expect(page.locator('#result')).toBeVisible({timeout:40000});
   await expect(page.locator('#app')).toHaveAttribute('data-stage','completed');
@@ -119,6 +125,14 @@ for(const size of sizes){
         expect(button.x+button.width).toBeLessThanOrEqual(size.width);
         expect(button.height).toBeGreaterThanOrEqual(44);
         if(size.width===390)await page.screenshot({path:'docs/screenshots/mobile-pedestrian-signal-390.png'});
+      }
+      if(await stage(page)==='destination'){
+        await expect(page.locator('#greet')).toHaveText('👋 向老師／志工問好');
+        const button=(await page.locator('#greet').boundingBox())!;
+        expect(button.x+button.width).toBeLessThanOrEqual(size.width);
+        await page.locator('#greet').click();
+        await expect(page.locator('#toast')).toContainText('早安');
+        if(size.width===390)await page.screenshot({path:'docs/screenshots/mobile-teacher-greeting-390.png'});
       }
       await moveAndAct(page);
     }
@@ -149,7 +163,7 @@ for(const size of sizes){test(`leave current practice from map and safety feedba
 });}
 test('every practice can restart and leave without losing its safe starting point',async({page})=>{
   test.setTimeout(360000);
-  for(const scene of ['walk','walk_side','guard','after_school_shuttle_courtyard','school_bus_gate_exterior','mrt','bus','parent','parent_east','scooter_main','scooter_side','transfer','human']){
+  for(const scene of ['walk','walk_side','after_school_shuttle_courtyard','school_bus_gate_exterior','mrt','bus','parent','parent_east','scooter_main','scooter_side','transfer','human']){
     await start(page,scene);
     const firstStage=await stage(page);const firstX=await page.locator('#app').getAttribute('data-x');const firstZ=await page.locator('#app').getAttribute('data-z');
     await expect(page.locator('#restart-practice'),scene).toBeVisible();await expect(page.locator('#leave-practice'),scene).toBeVisible();
@@ -193,7 +207,7 @@ test('keyboard movement, chain collision, demo, retry, teacher export',async({pa
   await page.locator('#settings').click();await page.locator('#reduced').check();await page.locator('[data-close="setting-panel"]').click();await moveAndAct(page);
   await page.locator('#teacher').click();await expect(page.locator('#event-list')).toContainText('unsafe_attempt');await expect(page.locator('#event-list')).toContainText('hint_viewed');const download=page.waitForEvent('download');await page.locator('#json').click();expect((await download).suggestedFilename()).toBe('wenxin-anonymous.json');
 });
-for(const scene of ['school_bus_gate_exterior','mrt','bus','parent','parent_east','scooter_main','scooter_side','transfer','human','guard']){
+for(const scene of ['school_bus_gate_exterior','mrt','bus','parent','parent_east','scooter_main','scooter_side','transfer','human']){
   test(`complete spatial journey ${scene}`,async({page})=>{
     if(scene==='bus')test.setTimeout(360000);
     await start(page,scene);let count=0;while(await stage(page)!=='completed'&&count++<32)await moveAndAct(page);
@@ -204,7 +218,7 @@ for(const scene of ['school_bus_gate_exterior','mrt','bus','parent','parent_east
 test('return walk follows opposite physical crossing',async({page})=>{
   await start(page,'walk',true);for(let i=0;i<7;i++)await moveAndAct(page);await expect(page.locator('#result')).toBeVisible();
 });
-test('side gate uses a separate crossing, guard and Blender street model',async({page})=>{
+test('side gate uses a separate crossing, teacher and Blender street model',async({page})=>{
   await page.setViewportSize({width:1366,height:768});const errors:string[]=[];page.on('pageerror',e=>errors.push(e.message));
   await start(page,'walk_side');expect(Number(await page.locator('#app').getAttribute('data-x'))).toBeLessThan(-40);expect(Number(await page.locator('#app').getAttribute('data-z'))).toBeLessThan(-20);
   const model=await page.request.get('/models/street_furniture.glb');expect(model.ok()).toBe(true);expect((await model.body()).byteLength).toBeGreaterThan(10000);

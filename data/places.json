@@ -2,7 +2,7 @@
   "schemaVersion": 1,
   "places": [
     {"id":"school","label":"文欣國小教學示意校門","status":"illustrative","sourceNote":"MASTER_SPEC.md、V2.4、校方公開交通安全鄰近圖、Google 街景與校方照片；只有建築外觀和相對分區參考來源，未量測尺寸。","lastVerifiedAt":null},
-    {"id":"side-gate","label":"復興北路側門步行路口・教學示意","status":"illustrative","sourceNote":"使用者指出側門在復興北路側，上學時開放通行；遊戲街廓角度、路口號誌與導護配置仍待現勘核實。","lastVerifiedAt":null},
+    {"id":"side-gate","label":"復興北路側門步行路口・教學示意","status":"illustrative","sourceNote":"使用者指出側門在復興北路側，上學時開放通行；遊戲街廓角度、路口號誌與過街後老師／志工位置仍待現勘核實。","lastVerifiedAt":null},
     {"id":"school-bus","label":"校門外東側校車示意等候區","status":"illustrative","sourceNote":"校方公開交通安全網站顯示校車與家長接送動線分區；遊戲格位與座標未現勘核實。","lastVerifiedAt":null},
     {"id":"parent-pickup-west","label":"正門西側汽車接送黃線示意區","status":"illustrative","sourceNote":"依使用者口述分區；黃線實際臨停規則、時段與格位待現場標誌及校方確認。","lastVerifiedAt":null},
     {"id":"parent-pickup-east","label":"正門東側汽車接送黃線示意區","status":"illustrative","sourceNote":"依使用者口述分區；黃線實際臨停規則、時段與格位待現場標誌及校方確認。","lastVerifiedAt":null},

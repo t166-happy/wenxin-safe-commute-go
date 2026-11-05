@@ -14,7 +14,7 @@ interface HumanCenteredProposal { scenarioId: string; hazardIds: string[]; stake
 ```
 
 ## 狀態機
-- WALK: start -> approachCrossing -> stop -> scan -> signalCheck -> cross -> guard -> school -> feedback.
+- WALK: start -> approachCrossing -> stop -> scan -> signalCheck -> cross -> optionalTeacherGreeting -> school -> feedback.
 - MRT: stationEntry -> gate -> chooseDirection -> platformQueue -> trainStopped -> allowAlighting -> board -> ride -> trainStoppedAtA8 -> alight -> stationExit -> walk -> school.
 - BUS: approachStop -> routeCheck -> queue -> busStopped -> board -> ride -> pressBell -> busStoppedAtDestination -> alight -> safeWalk.
 - SCHOOL/SHUTTLE: waitingArea -> queue -> vehicleStopped -> attendantOK -> board -> seatAssigned -> buckled -> ride -> stopped -> unbuckle -> orderlyAlight -> thank -> destination.
@@ -30,6 +30,6 @@ interface HumanCenteredProposal { scenarioId: string; hazardIds: string[]; stake
 
 ## 測試關鍵
 - 行車中不允許解除安全帶、不允許下車、未停妥不得上車。
-- 導護站未確認安全不得自動跨越路口。
+- 過街須確認行人號誌與車輛停讓；老師／志工問好發生在過街後，不作通行條件。
 - 禮貌互動不應造成安全規則被略過。
 - 重試不會把先前錯誤加總成負面人格標籤；匿名事件可匯出、重置、清除。

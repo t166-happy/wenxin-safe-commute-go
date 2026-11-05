@@ -5,7 +5,7 @@ export interface RuleDefinition {
 const rule = (ruleId: string, ruleText: string, predicates: string[]): RuleDefinition => ({ruleId,ruleText,predicates,sceneIds:['*'],explanationId:`${ruleId}.why`,correctiveActionId:`${ruleId}.how`,isCritical:true});
 export const rules: Record<string, RuleDefinition> = {
   approach:rule('approach','請沿行人空間走到標記旁。',['nearTarget']),
-  cross:rule('cross','先停看，等行人綠燈、車輛停讓及導護安全引導。',['stopped','lookLeft','lookRight','green','trafficYielded','adultCleared','onCrosswalk']),
+  cross:rule('cross','先停看，等行人綠燈並確認車輛停讓。',['stopped','lookLeft','lookRight','green','trafficYielded','onCrosswalk']),
   barrier:rule('barrier','鏈條是人車分界，請走指定登車口。',['boundaryClear']),
   vehicleLane:rule('vehicleLane','候車請留在人行空間，不站進車輛進場與停靠動線。',['safePlace']),
   gate:rule('gate','先核對車輛、排隊，等車停妥及成人放行。',['vehicleStopped','vehicleCorrect','adultCleared','studentTurn','crossingConflictFree']),
@@ -37,5 +37,6 @@ export const rules: Record<string, RuleDefinition> = {
   scooterStaySeated:rule('scooterStaySeated','行進中保持坐穩，雙腳放穩腳踏處。',['vehicleStopped']),
   improve:rule('improve','保留無障礙與救援通道，設施不可遮住視線。',['accessible','emergencyClear','sightClear']),
   courtesy:rule('courtesy','在安全位置、停車後向工作人員致意。',['vehicleStopped','safePlace']),
+  teacherGreet:rule('teacherGreet','安全過街後，靠近步道旁的老師或志工再問好。',['crossed','nearTeacher','safePlace']),
   help:rule('help','留在安全區，向老師或隨車人員求助。',['safePlace']),
 };
