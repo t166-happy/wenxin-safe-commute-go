@@ -38,6 +38,7 @@ async function moveAndAct(page:Page,touch=false){
     if(before==='cross')await expect(page.locator('#signal')).toHaveText('🚶 綠燈・已停讓',{timeout:60000});
     await press(page,'#assist',touch);
     await expect(page.locator('#assist')).toHaveText('◎ 前往標記',{timeout:40000});
+    if(await stage(page)==='completed')return;
     await page.waitForTimeout(450);
     if(before==='wait')await expect(page.locator('#signal')).toHaveText('🚶 綠燈・已停讓',{timeout:60000});
     if(['parent','scooter'].includes(mode??'')&&['park','arrival','rear','side','alight'].includes(before??''))await expect(page.locator('#signal')).toHaveText('👀 後方暫時淨空',{timeout:25000});
@@ -53,6 +54,18 @@ async function moveAndAct(page:Page,touch=false){
   }
   throw new Error(`Repeated crossing signal change at ${before}`);
 }
+for(const scene of ['walk','walk_side'])test(`${scene} enters school directly after crossing`,async({page})=>{
+  await start(page,scene);
+  let count=0;while(await stage(page)!=='cross'&&count++<7)await moveAndAct(page);
+  await expect(page.locator('#app')).toHaveAttribute('data-stage','cross');
+  await moveAndAct(page);
+  await expect(page.locator('#app')).toHaveAttribute('data-stage','destination');
+  await expect(page.locator('#status-banner')).toContainText('沿人行步道直接入校');
+  await expect(page.locator('#signal')).toHaveText('🏫 直接入校');
+  await press(page,'#assist');
+  await expect(page.locator('#result')).toBeVisible({timeout:40000});
+  await expect(page.locator('#app')).toHaveAttribute('data-stage','completed');
+});
 for(const size of sizes){
   test(`walk and shuttle playable ${size.width}x${size.height}`,async({page})=>{
     await page.setViewportSize(size);const errors:string[]=[];page.on('pageerror',e=>errors.push(e.message));await start(page);
