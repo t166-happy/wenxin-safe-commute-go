@@ -93,6 +93,7 @@ async function moveAndAct(page:Page,touch=false){
 }
 for(const scene of ['walk','walk_side'])test(`${scene} enters school directly after crossing`,async({page})=>{
   await page.setViewportSize({width:1366,height:768});await start(page,scene);
+  await expect(page.locator('#greeting-reminder')).toBeHidden();
   let count=0;while(await stage(page)!=='cross'&&count++<7){
     if(await stage(page)==='wait'){
       await expect(page.locator('#objective')).toHaveText('確認行人號誌燈號');
@@ -105,10 +106,20 @@ for(const scene of ['walk','walk_side'])test(`${scene} enters school directly af
   await expect(page.locator('#app')).toHaveAttribute('data-stage','destination');
   await expect(page.locator('#status-banner')).toContainText('沿人行步道直接入校');
   await expect(page.locator('#signal')).toHaveText('🏫 直接入校');
+  await expect(page.locator('#greeting-reminder')).toBeVisible();
+  await expect(page.locator('#greeting-reminder')).toContainText('記得向老師／志工問好');
   await expect(page.locator('#greet')).toHaveText('👋 向老師／志工問好');
-  await page.locator('#greet').click();
+  if(scene==='walk_side'){
+    await page.locator('#dismiss-greeting').click();
+    await expect(page.locator('#greeting-reminder')).toBeHidden();
+    await page.locator('#greet').click();
+  }else{
+    mkdirSync('docs/screenshots',{recursive:true});await page.screenshot({path:'docs/screenshots/teacher-reminder-1366.png'});
+    await page.locator('#greet-now').click();
+  }
   await expect(page.locator('#toast')).toContainText('早安');
   await expect(page.locator('#greet')).toHaveText('✓ 已向老師問好');
+  await expect(page.locator('#greeting-reminder')).toBeHidden();
   await expect(page.locator('#app')).toHaveAttribute('data-stage','destination');
   mkdirSync('docs/screenshots',{recursive:true});await page.screenshot({path:`docs/screenshots/teacher-greeting-${scene}-1366.png`});
   await press(page,'#assist');
@@ -127,11 +138,18 @@ for(const size of sizes){
         if(size.width===390)await page.screenshot({path:'docs/screenshots/mobile-pedestrian-signal-390.png'});
       }
       if(await stage(page)==='destination'){
+        await expect(page.locator('#greeting-reminder')).toBeVisible();
+        const reminder=(await page.locator('#greeting-reminder').boundingBox())!;
+        expect(reminder.x).toBeGreaterThanOrEqual(0);
+        expect(reminder.x+reminder.width).toBeLessThanOrEqual(size.width);
+        if(size.width===390){const close=(await page.locator('#dismiss-greeting').boundingBox())!;const greetNow=(await page.locator('#greet-now').boundingBox())!;expect(greetNow.y).toBeGreaterThanOrEqual(close.y+close.height);}
         await expect(page.locator('#greet')).toHaveText('👋 向老師／志工問好');
         const button=(await page.locator('#greet').boundingBox())!;
         expect(button.x+button.width).toBeLessThanOrEqual(size.width);
-        await page.locator('#greet').click();
+        if(size.width===390)await page.screenshot({path:'docs/screenshots/mobile-teacher-reminder-390.png'});
+        await page.locator('#greet-now').click();
         await expect(page.locator('#toast')).toContainText('早安');
+        await expect(page.locator('#greeting-reminder')).toBeHidden();
         if(size.width===390)await page.screenshot({path:'docs/screenshots/mobile-teacher-greeting-390.png'});
       }
       await moveAndAct(page);

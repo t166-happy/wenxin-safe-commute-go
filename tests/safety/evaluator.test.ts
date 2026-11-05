@@ -55,7 +55,9 @@ describe('V2.4 scene data validation',()=>{
       const j=new Journey(scenarios.find(s=>s.id===id)!);j.index=j.steps.findIndex(s=>s.id==='destination');
       j.position={...onRoad};expect(j.teacherNearby).toBe(false);
       j.position={...sidewalk};expect(j.teacherNearby).toBe(true);expect(j.attempt('greet')).toBe(true);expect(j.teacherGreeted).toBe(true);
+      j.position={x:sidewalk.x+7,z:sidewalk.z};expect(j.teacherNearby).toBe(false);
       expect(j.current.id).toBe('destination');
+      const direct=new Journey(scenarios.find(s=>s.id===id)!);direct.index=direct.steps.findIndex(s=>s.id==='destination');direct.position={...direct.current.target};expect(direct.attempt('finish')).toBe(true);expect(direct.complete).toBe(true);expect(direct.teacherGreeted).toBe(false);
     }
   });
   it('side entrance requires its own crossing safety checks and ends on the campus side',()=>{const side=scenarios.find(s=>s.id==='walk_side')!;const j=new Journey(side);expect(j.steps.map(step=>step.id)).toEqual(['approachSide','stop','left','right','wait','cross','destination']);expect(j.steps[0].target).toEqual({x:-43,z:-10});expect(j.steps.at(-1)?.target).toEqual({x:-27,z:-8});j.position={x:-41,z:-8};expect(j.move(2,0)).toBe(false);expect(j.blocked?.ruleId).toBe('cross');});

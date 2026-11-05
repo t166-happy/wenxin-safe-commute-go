@@ -14,6 +14,7 @@ app.innerHTML=`<div id="world"></div>
 <div class="map-note">◇ 教學示意 <span>｜道路、出口與停靠點待現勘核實</span></div>
 <div id="practice-actions" hidden><button id="restart-practice">↻ 復歸練習</button><button id="leave-practice">↩ 離開練習</button></div>
 <div id="status-banner" role="status" aria-live="polite" hidden><strong id="status-message"></strong></div>
+<aside id="greeting-reminder" role="status" aria-live="polite" aria-label="問好提醒" hidden><button id="dismiss-greeting" aria-label="關閉問好提醒">×</button><strong><span class="greeting-full">👋 記得向老師／志工問好</span><span class="greeting-short">👋 記得說早安！</span></strong><p>已安全過街，遇見老師或志工時說聲早安！</p><button id="greet-now" class="primary">👋 向老師／志工問好</button></aside>
 <section id="hud" class="compact" hidden><div class="chapter"><span id="scene-icon"></span><div><small id="scene-kicker">安全通學任務</small><h1 id="scene-title"></h1></div><button id="hud-toggle" aria-expanded="false">展開說明</button></div><section class="task-card"><div class="task-top"><span id="step-counter"></span><span id="signal">✋ 停等</span></div><div class="progress"><i id="progress"></i></div><h2 id="objective"></h2><p id="tip"></p><div class="evidence-row"><span>◎ 安全操作</span><span id="evidence">尚未開始</span></div></section><div id="world-caption" aria-live="polite"></div></section>
 <section id="explore-hud" hidden><p class="eyebrow">自由探索 · 教學示意</p><h1 id="explore-title">走進安全通學大地圖</h1><p id="nearby">靠近地上的金色地點，就能開始練習。</p><button id="overview" aria-pressed="false">◉ 看四面圍牆與雙校門</button></section>
 <footer id="controls" hidden><div class="movement"><div class="dpad" aria-label="移動方向"><button data-move="0,-1" aria-label="向前移動">↑</button><button data-move="-1,0" aria-label="向左移動">←</button><button data-move="0,1" aria-label="向後移動">↓</button><button data-move="1,0" aria-label="向右移動">→</button></div><span class="keyboard-help">WASD / 方向鍵移動<br>拖曳畫面轉視角 · E 互動</span></div><div class="actions"><button id="assist">◎ 前往標記</button><button id="interact" class="primary">開始互動</button><div class="minor-actions"><button id="greet">👋 揮手致意</button><button id="help">🙋 請求協助</button><button id="exit-vehicle" hidden>🚪 下車</button><button id="release-belt" hidden>🔓 解扣</button></div></div></footer>
@@ -31,7 +32,7 @@ app.innerHTML=`<div id="world"></div>
 const $=<T extends HTMLElement=HTMLElement>(id:string)=>document.getElementById(id) as T;
 let world:World;
 try{world=new World($('world'));}catch(error){$('world').innerHTML='<div class="webgl-error">這個瀏覽器尚未能啟動 3D 顯示。請使用支援 WebGL 的 Chrome 或 Edge，並開啟硬體加速。</div>';throw error;}
-const collector=new EvidenceCollector();const exploration=new Exploration();let selected:Scenario=scenarios[0];let journey:Journey|undefined;let entryPosition:Point={...exploration.position};let mapProblem:Evaluation|undefined;let assist=false;let voice=false;let speed=3.2;let last=performance.now();let toastAt=0;let uiAt=0;
+const collector=new EvidenceCollector();const exploration=new Exploration();let selected:Scenario=scenarios[0];let journey:Journey|undefined;let entryPosition:Point={...exploration.position};let mapProblem:Evaluation|undefined;let assist=false;let voice=false;let speed=3.2;let last=performance.now();let toastAt=0;let uiAt=0;let greetingDismissed=false;let greetingAnnounced=false;
 const keys=new Set<string>();let touch:Point={x:0,z:0};let pointer:{x:number;y:number;lastX:number;drag:boolean}|undefined;
 function modalOpen(){return !!document.querySelector('dialog[open]');}
 function release(){keys.clear();touch={x:0,z:0};assist=false;}
@@ -46,13 +47,13 @@ exploration.onResult=onEvaluation;
 function enterMap(){release();$<HTMLDialogElement>('menu').close();$('controls').hidden=false;$('explore-hud').hidden=false;world.overview=true;updateOverviewUI();updateUI();toast('先看校園四面圍牆；按「回到角色」開始走動。');}
 function updateOverviewUI(){const active=world.overview;$('explore-hud').classList.toggle('overview',active);$('explore-title').textContent=active?'四面圍牆・正門與側門':'走進安全通學大地圖';$('overview').textContent=active?'◎ 回到角色，沿步道行走':'◉ 看四面圍牆與雙校門';$('overview').setAttribute('aria-pressed',String(active));app.dataset.view=active?'campus-overview':'follow';}
 function returnToMap(completed=false){
-  release();const detached=!!journey&&completed&&atDetachedDestination(journey.position);if(journey){exploration.position=completed&&!detached?{...journey.position}:{...entryPosition};journey=undefined;}
+  release();greetingDismissed=false;greetingAnnounced=false;const detached=!!journey&&completed&&atDetachedDestination(journey.position);if(journey){exploration.position=completed&&!detached?{...journey.position}:{...entryPosition};journey=undefined;}
   for(const d of document.querySelectorAll<HTMLDialogElement>('dialog[open]'))d.close();$('hud').hidden=true;$('explore-hud').hidden=false;$('controls').hidden=false;$('belt-tools').hidden=true;$('design-tools').hidden=true;world.overview=true;updateOverviewUI();updateUI();
   if(detached)toast('已用輔助定位回到本次練習起點。');
 }
 function startPractice(){
   const site=nearbySite(exploration.position);if(!site){toast('請先走到金色地點旁；也可打開大地圖使用輔助定位。');return;}
-  selected=site.scenario;entryPosition={...exploration.position};release();journey=new Journey(selected,$<HTMLSelectElement>('direction').value==='fromSchool'&&selected.mode==='walk');journey.onResult=onEvaluation;world.yaw=.3;world.overview=false;
+  selected=site.scenario;entryPosition={...exploration.position};release();greetingDismissed=false;greetingAnnounced=false;journey=new Journey(selected,$<HTMLSelectElement>('direction').value==='fromSchool'&&selected.mode==='walk');journey.onResult=onEvaluation;world.yaw=.3;world.overview=false;
   for(const d of document.querySelectorAll<HTMLDialogElement>('dialog[open]'))d.close();$('hud').hidden=false;setHudCompact(true);$('controls').hidden=false;
   $('explore-hud').hidden=true;
   $('scene-icon').textContent=selected.icon;$('scene-title').textContent=selected.label;$('scene-kicker').textContent=`${journey.reverse?'放學旅程':'安全通學'} / 教學示意`;
@@ -60,7 +61,7 @@ function startPractice(){
 }
 function restartPractice(){
   if(!journey)return;
-  const reverse=journey.reverse;release();mapProblem=undefined;
+  const reverse=journey.reverse;release();greetingDismissed=false;greetingAnnounced=false;mapProblem=undefined;
   for(const d of document.querySelectorAll<HTMLDialogElement>('dialog[open]'))d.close();
   journey=new Journey(selected,reverse);journey.onResult=onEvaluation;
   world.yaw=.3;world.distance=25;world.overview=false;$('hud').hidden=false;setHudCompact(true);
@@ -82,10 +83,12 @@ function interact(action=journey?.current?.action,extras:Record<string,boolean>=
   updateUI();
 }
 function updateUI(){
-  if(!journey){$('practice-actions').hidden=true;$('pause-practice-actions').hidden=true;$('status-banner').hidden=true;const site=nearbySite(exploration.position),nearest=nearestSite(exploration.position);$('nearby').textContent=site?`${site.scenario.icon} ${site.scenario.label}就在身旁。按「開始練習」。`:`最近地點：${nearest.scenario.label}。沿人行空間前進，或開地圖輔助定位。`;$('interact').textContent=site?`開始${site.scenario.label}`:'靠近地點開始';$('assist').textContent='◇ 查看大地圖';$('greet').textContent='👋 揮手致意';$('exit-vehicle').hidden=true;$('release-belt').hidden=true;app.dataset.x=exploration.position.x.toFixed(3);app.dataset.z=exploration.position.z.toFixed(3);app.dataset.stage='explore';app.dataset.mode='explore';app.dataset.gate='false';app.dataset.complete='false';return;}$('practice-actions').hidden=false;$('pause-practice-actions').hidden=false;const s=journey.current;
+  if(!journey){$('practice-actions').hidden=true;$('pause-practice-actions').hidden=true;$('status-banner').hidden=true;$('greeting-reminder').hidden=true;const site=nearbySite(exploration.position),nearest=nearestSite(exploration.position);$('nearby').textContent=site?`${site.scenario.icon} ${site.scenario.label}就在身旁。按「開始練習」。`:`最近地點：${nearest.scenario.label}。沿人行空間前進，或開地圖輔助定位。`;$('interact').textContent=site?`開始${site.scenario.label}`:'靠近地點開始';$('assist').textContent='◇ 查看大地圖';$('greet').textContent='👋 揮手致意';$('exit-vehicle').hidden=true;$('release-belt').hidden=true;app.dataset.x=exploration.position.x.toFixed(3);app.dataset.z=exploration.position.z.toFixed(3);app.dataset.stage='explore';app.dataset.mode='explore';app.dataset.gate='false';app.dataset.complete='false';return;}$('practice-actions').hidden=false;$('pause-practice-actions').hidden=false;const s=journey.current;
   $('step-counter').textContent=`任務 ${Math.min(journey.index+1,journey.steps.length)} / ${journey.steps.length}`;
   $('progress').style.width=`${journey.index/journey.steps.length*100}%`;$('objective').textContent=s?.label??'安全旅程完成';$('tip').textContent=s?.tip??'在自己的步調裡繼續練習。';$('interact').textContent=s?.verb??'✓ 已完成';
   $('greet').textContent=journey.teacherGreeted?'✓ 已向老師問好':journey.teacherNearby?'👋 向老師／志工問好':'👋 揮手致意';
+  const remind=journey.teacherNearby&&!journey.teacherGreeted&&!greetingDismissed&&!modalOpen();$('greeting-reminder').hidden=!remind;
+  if(remind&&!greetingAnnounced){greetingAnnounced=true;speak('已安全過街，遇見老師或志工，記得說早安。');}
   const road=['approachSide','stop','left','right','wait','cross'].includes(s?.id);
   const afterCrossing=s?.id==='destination'&&journey.steps[journey.index-1]?.id==='cross';
   $('signal').textContent=afterCrossing?(journey.reverse?'🚶 沿步道前進':'🏫 直接入校'):road?(journey.facts.green?(journey.facts.trafficYielded?'🚶 綠燈・已停讓':'👀 綠燈・再確認停讓'):'✋ 紅燈・停等'):(journey.scenario.mode==='scooter'&&!journey.facts.motorcycleTurn?'🛵 等前車駛離':['parent','scooter'].includes(journey.scenario.mode)&&journey.facts.vehicleStopped?(journey.facts.rearTrafficClear?'👀 後方暫時淨空':'✋ 後方有車・先等'):s?.id==='clearance'&&!journey.facts.studentTurn?'👣 等前方同學':journey.facts.vehicleStopped?'🛑 已停穩':`${journey.scenario.mode==='scooter'?'🛵':journey.scenario.mode==='parent'?'🚙':'🚐'} 車輛移動中`);
@@ -114,6 +117,7 @@ for(const id of ['leave-practice','leave-paused','leave-feedback'])$(id).onclick
 for(const el of document.querySelectorAll<HTMLButtonElement>('[data-place]'))el.onclick=()=>{const site=exploreSites.find(s=>s.scenario.id===el.dataset.place)!;returnToMap();exploration.relocate(site);world.overview=false;updateOverviewUI();updateUI();toast(`已到${site.area}的安全位置；靠近金色標記開始練習。`);};
 $('overview').onclick=()=>{world.overview=!world.overview;updateOverviewUI();};
 $('start').onclick=enterMap;$('interact').onclick=()=>interact();$('assist').onclick=()=>{if(!journey){release();$<HTMLDialogElement>('map-panel').showModal();return;}assist=!assist;keys.clear();touch={x:0,z:0};updateUI();};$('greet').onclick=()=>journey?interact('greet'):toast('向附近的人友善致意；請先確認自己站在安全位置。');$('help').onclick=()=>journey?interact('help'):toast('請留在安全區，向老師或志工求助。');$('exit-vehicle').onclick=()=>interact('alight');$('release-belt').onclick=()=>interact('unbuckle');
+$('greet-now').onclick=()=>interact('greet');$('dismiss-greeting').onclick=()=>{greetingDismissed=true;$('greeting-reminder').hidden=true;};
 function retryFeedback(){journey?.retry();mapProblem=undefined;$<HTMLDialogElement>('feedback').close();$('demo-steps').classList.remove('demonstrating');updateUI();}
 $('retry').onclick=retryFeedback;
 $('demo').onclick=()=>{const problem=journey?.blocked??mapProblem;if(!problem)return;collector.record(journey?.scenario.id??'map',journey?.current.id??'explore',problem,true);$('demo-steps').classList.remove('demonstrating');void $('demo-steps').offsetWidth;$('demo-steps').classList.add('demonstrating');$('demo-caption').textContent='示範：先在安全區停下 → 沿指定安全動線前進。';speak(feedbackSteps(problem).join('。'));};
