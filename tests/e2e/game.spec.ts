@@ -15,6 +15,23 @@ for(const size of sizes){
     expect(errors).toEqual([]);
   });
 }
+test('welcome uses the Wenxin game name and free exploration safely walks through the guarded crossing',async({page})=>{
+  await page.setViewportSize({width:1366,height:768});await page.goto('/');
+  await expect(page.locator('#menu h1')).toContainText('文欣安全通學');
+  await expect(page.locator('#menu h1')).toContainText('GO!');
+  await page.locator('#start').click();await page.locator('#overview').click();
+  await expect(page.locator('#explore-title')).toHaveText('文欣安全通學GO!');
+  await page.keyboard.down('ArrowUp');await page.waitForTimeout(300);await page.keyboard.up('ArrowUp');
+  await expect(page.locator('#world')).toHaveAttribute('data-pedestrian-signal','green-man',{timeout:20000});
+  await expect(page.locator('#world')).toHaveAttribute('data-guides','directing',{timeout:5000});
+  await expect(page.locator('#status-banner')).toContainText('可走斑馬線');
+  await page.keyboard.down('ArrowUp');
+  await expect.poll(async()=>Number(await page.locator('#app').getAttribute('data-z')),{timeout:12000}).toBeLessThan(1.4);
+  await page.keyboard.up('ArrowUp');
+  await expect(page.locator('#feedback')).not.toBeVisible();
+  await expect(page.locator('#app')).toHaveAttribute('data-explore-crossing','none');
+  await page.screenshot({path:'docs/screenshots/free-explore-crossing-1366.png'});
+});
 async function press(page:Page,selector:string,touch=false){if(touch)await page.locator(selector).tap();else await page.locator(selector).click();}
 async function chooseSite(page:Page,scene:string,reverse=false,touch=false){await press(page,'#missions',touch);if(reverse)await page.locator('#direction').selectOption('fromSchool');await press(page,`[data-place="${scene}"]`,touch);await press(page,'#interact',touch);}
 async function start(page:Page,scene='walk',reverse=false,touch=false){await page.goto('/');await press(page,'#start',touch);if(scene!=='walk'||reverse)await chooseSite(page,scene,reverse,touch);else await press(page,'#interact',touch);await expect(page.locator('#hud')).toBeVisible();}
@@ -55,7 +72,7 @@ test('main and side crossing show a green walking figure only while cars stop',a
 test('the guide explains gold rings and auto walk reaches one before the action',async({page})=>{
   await page.setViewportSize({width:1366,height:768});await start(page);
   await page.locator('#guide').click();
-  await expect(page.locator('#guide-panel')).toContainText('走進地上的金色圈');
+  await expect(page.locator('#guide-panel')).toContainText('走進圈內後按任務動作');
   await expect(page.locator('#guide-panel')).toContainText('抵達後仍須自己按動作');
   await page.locator('[data-close="guide-panel"]').click();
   const initial=Number(await page.locator('#app').getAttribute('data-z'));
@@ -73,39 +90,54 @@ test('the guide explains gold rings and auto walk reaches one before the action'
 test('context instructions appear near the side-gate mark and safety feedback stays off the avatar',async({page})=>{
   await page.setViewportSize({width:390,height:844});await start(page,'walk_side');
   await expect(page.locator('#hud')).toHaveClass(/context-distant/);
-  await expect(page.locator('#hud .task-card')).toBeHidden();
+  await expect(page.locator('#hud .task-card')).toBeVisible();
+  await expect(page.locator('#objective')).toContainText('前往紅環');
+  await expect(page.locator('#quick-cue')).toContainText('沿安全步道走進紅環');
   await expect(page.locator('#interaction-hint')).toBeHidden();
   await expect(page.locator('#status-banner')).toBeHidden();
   await page.screenshot({path:'docs/screenshots/side-walk-distant-390.png'});
   await page.locator('#hud-toggle').click();
   await expect(page.locator('#hud .task-card')).toBeVisible();
+  await expect(page.locator('#tip')).toBeVisible();
   await page.locator('#hud-toggle').click();
-  await expect(page.locator('#hud .task-card')).toBeHidden();
+  await expect(page.locator('#hud .task-card')).toBeVisible();
   await page.locator('#assist').click();
   await expect(page.locator('#hud .task-card')).toBeVisible({timeout:20000});
   await expect(page.locator('#interaction-hint')).toBeVisible();
   await page.screenshot({path:'docs/screenshots/side-walk-near-390.png'});
   await page.locator('#interact').click();
-  await page.locator('#interact').click();
+  if(!await page.locator('#feedback').isVisible())await page.locator('#interact').click();
   await expect(page.locator('#feedback')).toBeVisible({timeout:8000});
   const feedback=await page.locator('#feedback').boundingBox();
   expect(feedback).not.toBeNull();
-  expect(feedback!.y).toBeGreaterThan(430);
+  expect(feedback!.x).toBeGreaterThan(390*.44);
+  expect(feedback!.y+feedback!.height).toBeLessThan(680);
   await page.screenshot({path:'docs/screenshots/side-walk-feedback-390.png'});
 });
 for(const size of [{width:1366,height:768},{width:768,height:1024}]){
   test(`distant and nearby prompts stay at the edge ${size.width}x${size.height}`,async({page})=>{
     await page.setViewportSize(size);await start(page,'walk_side');
-    await expect(page.locator('#hud .task-card')).toBeHidden();
+    await expect(page.locator('#hud .task-card')).toBeVisible();
+    await expect(page.locator('#objective')).toContainText('前往紅環');
     await expect(page.locator('#status-banner')).toBeHidden();
     await page.screenshot({path:`docs/screenshots/side-walk-distant-${size.width}.png`});
     await page.locator('#assist').click();
     await expect(page.locator('#hud .task-card')).toBeVisible({timeout:20000});
     await page.screenshot({path:`docs/screenshots/side-walk-near-${size.width}.png`});
     const card=await page.locator('#hud .task-card').boundingBox();
-    expect(card!.x+card!.width).toBeLessThan(size.width/2);
+    expect(card!.x).toBeGreaterThan(size.width*.55);
   });
 }
+test('next action has a red pulsing 3D ring and reduced motion keeps it steady',async({page})=>{
+  await page.setViewportSize({width:1366,height:768});await start(page,'walk_side');
+  await expect(page.locator('#world')).toHaveAttribute('data-next-ring','pulsing');
+  const first=Number(await page.locator('#world').getAttribute('data-next-ring-opacity'));
+  await expect.poll(async()=>Math.abs(Number(await page.locator('#world').getAttribute('data-next-ring-opacity'))-first),{timeout:3000}).toBeGreaterThan(.12);
+  await page.screenshot({path:'docs/screenshots/next-action-ring-1366.png'});
+  await page.locator('#settings').click();await page.locator('#reduced').check();await page.locator('[data-close="setting-panel"]').click();
+  await expect(page.locator('#world')).toHaveAttribute('data-next-ring','steady');
+  await expect(page.locator('#world')).toHaveAttribute('data-next-ring-opacity','0.85');
+});
 test('3D wheels rotate with road traffic and scooters, then stop with brake lights',async({page})=>{
   await page.setViewportSize({width:1366,height:768});await page.goto('/');await page.locator('#start').click();
   const world=page.locator('#world');
@@ -152,6 +184,7 @@ async function moveAndAct(page:Page,touch=false){
     await expect(page.locator('#assist')).toHaveText('◎ 前往標記',{timeout:40000});
     if(await stage(page)==='completed')return;
     await page.waitForTimeout(450);
+    if(before==='compare'&&mode==='human')await expect(page.locator('#world')).toHaveAttribute('data-wheelchair-inside','true',{timeout:12000});
     if(before==='wait')await expect(page.locator('#signal')).toHaveText('🚶 綠燈・已停讓',{timeout:60000});
     if(['parent','scooter'].includes(mode??'')&&['park','arrival','rear','side','alight'].includes(before??''))await expect(page.locator('#signal')).toHaveText('👀 後方暫時淨空',{timeout:25000});
     else if(before==='clearance'||before==='arrival'||before==='side')await expect(page.locator('#signal')).toHaveText('🛑 已停穩',{timeout:10000});
@@ -360,6 +393,22 @@ for(const scene of ['school_bus_gate_exterior','mrt','bus','parent','parent_east
     if(scene==='school_bus_gate_exterior'){const history=await page.evaluate(()=>localStorage.getItem('wenxin-safety-v1'));expect(history).toContain('school_bus_gate_exterior');}
   });
 }
+test('human designer places the ramp before a wheelchair reaches the school entrance',async({page})=>{
+  await page.setViewportSize({width:1366,height:768});await start(page,'human');
+  await expect(page.locator('#world')).toHaveAttribute('data-ramp-visible','false');
+  for(let n=0;n<3;n++)await moveAndAct(page);
+  await expect(page.locator('#app')).toHaveAttribute('data-stage','compare');
+  await expect(page.locator('#world')).toHaveAttribute('data-ramp-visible','true');
+  await expect(page.locator('#world')).toHaveAttribute('data-wheelchair-phase','climbing',{timeout:5000});
+  await page.screenshot({path:'docs/screenshots/human-ramp-climbing-1366.png'});
+  await expect(page.locator('#world')).toHaveAttribute('data-wheelchair-phase','entering',{timeout:8000});
+  await expect.poll(async()=>Number(await page.locator('#world').getAttribute('data-entrance-door-open'))).toBeGreaterThan(.9);
+  await page.screenshot({path:'docs/screenshots/human-ramp-entering-1366.png'});
+  await expect(page.locator('#world')).toHaveAttribute('data-wheelchair-inside','true',{timeout:8000});
+  await expect.poll(async()=>Number(await page.locator('#world').getAttribute('data-wheelchair-z'))).toBeLessThan(-19);
+  await expect(page.locator('#status-banner')).toContainText('已進入校舍');
+  await page.screenshot({path:'docs/screenshots/human-school-ramp-1366.png'});
+});
 test('return walk follows opposite physical crossing',async({page})=>{
   await start(page,'walk',true);for(let i=0;i<7;i++)await moveAndAct(page);await expect(page.locator('#result')).toBeVisible();
 });

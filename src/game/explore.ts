@@ -1,7 +1,7 @@
 import {chainCollision,intersects,sideGateChainCollision,type Point} from '../safety/checkpoints';
 import {SafetyRuleEvaluator,type Evaluation} from '../safety/evaluator';
 import {scenarios,type Scenario} from '../data/scenarios';
-import {campusParkingArea,crossesVehicleGate,frontRoad,hitsCampusWall,onPedestrianSpace,otherRoads} from './streetMap';
+import {campusParkingArea,crossesVehicleGate,frontRoad,hitsCampusWall,onPedestrianSpace,otherRoads,schoolEntranceStep} from './streetMap';
 
 export interface ExploreSite {scenario:Scenario;entry:Point;area:string}
 const entries:Record<string,{entry:Point;area:string}>={
@@ -25,24 +25,37 @@ export function atDetachedDestination(point:Point){return point.x>=76&&point.x<=
 
 export class Exploration {
   position:Point={x:6,z:11};
+  activeCrossing:'main'|'side'|null=null;
+  crossingState={green:false,trafficYielded:false,guideReady:false};
   readonly evaluator=new SafetyRuleEvaluator();
   onResult?:(result:Evaluation)=>void;
+  setCrossingState(state:{green:boolean;trafficYielded:boolean;guideReady:boolean}){this.crossingState=state;}
+  get nearCrossing(){return Math.abs(this.position.x-6)<3&&this.position.z>=.8&&this.position.z<=10.5||Math.abs(this.position.z+8)<2.5&&this.position.x>=-44&&this.position.x<=-32;}
   move(dx:number,dz:number){
     const from=this.position;const to={x:from.x+dx,z:from.z+dz};
     const station=to.x>=48&&to.x<=68&&to.z>=-4&&to.z<=12;
     const destination=atDetachedDestination(to);
-    if([frontRoad,...otherRoads].some(road=>intersects(from,to,road))){
-      this.onResult?.(this.evaluator.evaluate('vehicleLane',{safePlace:false},'map-safe-wait'));
-      return false;
+    const road=[frontRoad,...otherRoads].find(box=>intersects(from,to,box));
+    let crossing:'main'|'side'|null=null;
+    if(road===frontRoad&&[from.x,to.x].every(x=>Math.abs(x-6)<1.2)&&[from.z,to.z].every(z=>z>=1.2&&z<=8.2))crossing='main';
+    if(road===otherRoads[0]&&[from.z,to.z].every(z=>Math.abs(z+8)<1.2)&&[from.x,to.x].every(x=>x>=-43.2&&x<=-33.5))crossing='side';
+    if(road&&!crossing){this.onResult?.(this.evaluator.evaluate('vehicleLane',{safePlace:false},'map-safe-wait'));return false;}
+    if(crossing&&this.activeCrossing!==crossing){
+      const safe=this.evaluator.evaluate('mapCross',{...this.crossingState,onCrosswalk:true},`map-${crossing}-crossing`);
+      if(!safe.allowed){this.onResult?.(safe);return false;}
     }
     if(sideGateChainCollision(from,to)){this.onResult?.(this.evaluator.evaluate('sideBarrier',{boundaryClear:false},'map-side-gate-chain'));return false;}
-    if(!(onPedestrianSpace(to)||station||destination)){
+    if(intersects(from,to,schoolEntranceStep)){this.onResult?.(this.evaluator.evaluate('stepBarrier',{accessible:false},'map-school-step'));return false;}
+    if(!(onPedestrianSpace(to)||station||destination||crossing)){
       return false;
     }
     if(intersects(from,to,campusParkingArea)){this.onResult?.(this.evaluator.evaluate('vehicleLane',{safePlace:false},'map-parking-area'));return false;}
     if(crossesVehicleGate(from,to)){this.onResult?.(this.evaluator.evaluate('vehicleLane',{safePlace:false},'map-vehicle-gate'));return false;}
     if(hitsCampusWall(from,to)||chainCollision(from,to,false)||to.x<.8&&to.x> -15&&to.z<0&&to.z> -13.7){this.onResult?.(this.evaluator.evaluate('barrier',{boundaryClear:false},'map-boundary'));return false;}
-    this.position=to;return true;
+    this.position=to;
+    if(crossing)this.activeCrossing=crossing;
+    if(this.activeCrossing==='main'&&!intersects(to,to,frontRoad)||this.activeCrossing==='side'&&!intersects(to,to,otherRoads[0]))this.activeCrossing=null;
+    return true;
   }
-  relocate(site:ExploreSite){this.position={...site.entry};}
+  relocate(site:ExploreSite){this.position={...site.entry};this.activeCrossing=null;}
 }

@@ -6,8 +6,10 @@ const rule = (ruleId: string, ruleText: string, predicates: string[]): RuleDefin
 export const rules: Record<string, RuleDefinition> = {
   approach:rule('approach','請沿行人空間走到標記旁。',['nearTarget']),
   cross:rule('cross','先停看，等行人綠燈並確認車輛停讓。',['stopped','lookLeft','lookRight','green','trafficYielded','onCrosswalk']),
+  mapCross:rule('mapCross','自由探索過街請等小綠人、車輛停讓與導護到位，再走斑馬線。',['green','trafficYielded','guideReady','onCrosswalk']),
   barrier:rule('barrier','鏈條是人車分界，請走指定登車口。',['boundaryClear']),
   sideBarrier:rule('sideBarrier','側門錐鏈分隔停車區，請沿學生步道走向校舍。',['boundaryClear']),
+  stepBarrier:rule('stepBarrier','校舍前有一層階梯；輪椅請走設置完成的坡道。',['accessible']),
   vehicleLane:rule('vehicleLane','候車請留在人行空間，不站進車輛進場與停靠動線。',['safePlace']),
   gate:rule('gate','先核對車輛、排隊，等車停妥及成人放行。',['vehicleStopped','vehicleCorrect','adultCleared','studentTurn','crossingConflictFree']),
   board:rule('board','車停穩、開門、輪到自己，再依引導上車。',['vehicleStopped','doorOpen','vehicleCorrect','adultCleared','studentTurn','crossingConflictFree']),

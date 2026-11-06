@@ -1,7 +1,7 @@
 import {SafetyRuleEvaluator,type Evaluation,type Facts} from '../safety/evaluator';
 import {chainCollision,intersects,sideGateChainCollision,type Point,type Box} from '../safety/checkpoints';
 import type {Scenario} from '../data/scenarios';
-import {campusParkingArea,crossesVehicleGate,crossings,frontRoad,hitsCampusWall,onMarkedCrosswalk,onPedestrianSpace,otherRoads} from './streetMap';
+import {campusParkingArea,crossesVehicleGate,crossings,frontRoad,hitsCampusWall,onMarkedCrosswalk,onPedestrianSpace,otherRoads,schoolEntranceStep} from './streetMap';
 import {crossingGuideRoutes} from './crossingGuides';
 export interface Step {id:string;label:string;action:string;verb:string;target:Point;rule:string;tip:string}
 export const INTERACTION_RADIUS=.8; // The visible gold ring is the actual action area.
@@ -21,7 +21,7 @@ function walking(reverse=false,x:number=crossings[0].x):Step[]{
 }
 export function makeSteps(s:Scenario,reverse:boolean):Step[]{
   if(s.mode==='walk')return walking(reverse,s.id==='walk_side'?crossings[1].x:crossings[0].x);
-  if(s.mode==='human')return [step('observe','觀察狹窄步道，收集風險證據','observe','🔎 標記風險',p(6,-7)),step('stakeholder','留意輪椅與推車的需要','stakeholder','♿ 關心用路人',p(6,-7)),step('place','將改善設施放到金色位置','place','🌱 放置坡道',p(6,-4),'improve','將坡道圖卡拖到 3D 金色圓圈，或到圈旁按互動。'),step('compare','觀察改善前後通行空間','compare','↔ 比較前後',p(6,-4)),step('proposal','以圖卡保存改善建議','proposal','📋 保存提案',p(6,-4))];
+  if(s.mode==='human')return [step('observe','觀察校舍前的一層階梯','observe','🔎 標記障礙',p(6.5,-12.8),'approach','走近校舍，觀察輪椅無法直接通過的階梯。'),step('stakeholder','留意輪椅使用者的通行需要','stakeholder','♿ 關心用路人',p(6.5,-12.8)),step('place','在階梯前設置坡道','place','♿ 放置坡道',p(6.5,-14.7),'improve','將坡道圖卡拖到階梯前金色圓圈，或站在圈內按互動。'),step('compare','沿新坡道觀察通行改善','compare','↔ 比較前後',p(6.5,-17)),step('proposal','保存階梯與坡道改善建議','proposal','📋 保存提案',p(6.5,-17))];
   if(s.mode==='parent'){
     const seat=p(130,-1),sidewalk=p(s.stop!.x-3.5,11.4);
     return [
@@ -69,7 +69,7 @@ export function makeSteps(s:Scenario,reverse:boolean):Step[]{
 }
 export class Journey {
   readonly evaluator=new SafetyRuleEvaluator();
-  steps:Step[];index=0;position:Point;checkpoint:Point;facts:Facts={};elapsed=0;stoppedFor=0;queueAt:number|null=null;rideAt:number|null=null;departAt:number|null=null;teacherGreeted=false;
+  steps:Step[];index=0;position:Point;checkpoint:Point;facts:Facts={};elapsed=0;stoppedFor=0;queueAt:number|null=null;rideAt:number|null=null;departAt:number|null=null;rampPlacedAt:number|null=null;teacherGreeted=false;
   blocked:Evaluation|null=null;complete=false;vehicleProgress=0;onResult?:(r:Evaluation)=>void;
   obstacles:Box[]=[];
   constructor(readonly scenario:Scenario,readonly reverse=false){
@@ -147,6 +147,7 @@ export class Journey {
     if(action==='help')return this.evaluate('help',{safePlace:this.inside?!!this.facts.seated&&(!!this.facts.buckled||!!this.facts.holdingRail||this.scenario.mode==='scooter'&&!!this.facts.helmeted&&!!this.facts.feetOnFootrests):safePlace}).allowed;
     const current=this.current;if(!current)return false;
     const near=Math.hypot(this.position.x-current.target.x,this.position.z-current.target.z)<=INTERACTION_RADIUS;
+    if(this.scenario.mode==='human'&&action==='compare'&&this.rampPlacedAt!==null&&this.elapsed-this.rampPlacedAt<6.5)return false;
     if(action!==current.action){const rule=action==='board'?(this.scenario.mode==='scooter'?'scooterBoard':'board'):action==='alight'?(this.scenario.mode==='scooter'?'scooterAlight':this.scenario.mode==='parent'?'parentAlight':'alight'):action==='unbuckle'?'unbuckle':action==='seat'?(this.scenario.mode==='scooter'?'scooterSeat':'seat'):action==='place'?'improve':'approach';return this.evaluate(rule,{...overrides,nearTarget:false,...(rule==='seat'||rule==='scooterSeat'?{correctSeat:false}:{})}).allowed&&false;}
     if(!near){this.evaluate('approach',{nearTarget:false});return false;}
     const extras:Facts={nearTarget:near,...overrides};
@@ -180,6 +181,7 @@ export class Journey {
     if(action==='alight')this.position=this.scenario.mode==='scooter'?(this.scenario.id==='scooter_side'?p(-33,-14):p(-5,11)):this.scenario.mode==='mrt'?p(64,15.3):this.scenario.mode==='after_school_shuttle'||this.reverse?p(80,2):this.scenario.mode==='parent'?p(this.scenario.stop!.x-2.4,10.8):p(1,9);
     if(action==='clearCar'){this.facts.doorClosed=true;this.facts.clearOfBlindSpot=true;this.departAt=this.elapsed;}
     if(action==='clearScooter'){this.facts.clearOfBlindSpot=true;this.departAt=this.elapsed;}
+    if(action==='place'&&this.scenario.mode==='human')this.rampPlacedAt=this.elapsed;
     this.index++;this.checkpoint={...this.position};this.stoppedFor=0;
     if(this.index>=this.steps.length)this.complete=true;
     return true;
@@ -201,6 +203,8 @@ export class Journey {
     else {
       const stationWalk=this.scenario.mode==='mrt'&&to.x>=47&&to.x<=79&&to.z>=9&&to.z<=15.5;
       if(sideGateChainCollision(this.position,to)){this.evaluate('sideBarrier',{boundaryClear:false});return false;}
+      const rampOpen=this.scenario.mode==='human'&&this.index>=3&&this.position.x>=5.55&&this.position.x<=7.45&&to.x>=5.55&&to.x<=7.45;
+      if(intersects(this.position,to,schoolEntranceStep)&&!rampOpen){this.evaluate('stepBarrier',{accessible:false});return false;}
       if(!(onPedestrianSpace(to)||stationWalk||onMarkedCrosswalk(to))){if(otherRoads.some(road=>intersects(this.position,to,road)))this.evaluate('vehicleLane',{safePlace:false});return false;}
       if(intersects(this.position,to,campusParkingArea)){this.evaluate('vehicleLane',{safePlace:false});return false;}
       if(this.scenario.stop&&(this.scenario.stop.z>=7||this.scenario.mode==='parent')&&intersects(this.position,to,{minX:this.scenario.stop.x-2,maxX:this.scenario.stop.x+2,minZ:this.scenario.mode==='parent'?4.6:7.1,maxZ:this.scenario.mode==='parent'?7.35:10.4})){

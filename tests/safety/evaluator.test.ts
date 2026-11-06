@@ -80,7 +80,34 @@ describe('V2.4 scene data validation',()=>{
     j.index=j.steps.findIndex(s=>s.id==='queue');j.position={x:71,z:13};
     expect(j.move(1,0)).toBe(true);
   });
-  it('one map has all practice sites without a separate guard station and blocks shortcuts',()=>{expect(exploreSites).toHaveLength(scenarios.length);expect(exploreSites.some(site=>site.scenario.id==='guard')).toBe(false);const e=new Exploration();expect(nearbySite(e.position)?.scenario.id).toBe('walk');expect(e.move(1,0)).toBe(true);e.position={x:6,z:8};let blocked='';e.onResult=r=>{blocked=r.ruleId;};expect(e.move(0,-2)).toBe(false);expect(blocked).toBe('vehicleLane');e.position={x:3,z:-5};expect(e.move(-5,0)).toBe(false);expect(blocked).toBe('barrier');});
+  it('one map has all practice sites without a separate guard station and blocks shortcuts',()=>{expect(exploreSites).toHaveLength(scenarios.length);expect(exploreSites.some(site=>site.scenario.id==='guard')).toBe(false);const e=new Exploration();expect(nearbySite(e.position)?.scenario.id).toBe('walk');expect(e.move(1,0)).toBe(true);e.position={x:6,z:8};let blocked='';e.onResult=r=>{blocked=r.ruleId;};expect(e.move(0,-2)).toBe(false);expect(blocked).toBe('mapCross');e.position={x:3,z:-5};expect(e.move(-5,0)).toBe(false);expect(blocked).toBe('barrier');});
+  it('free exploration crosses at both marked crossings only after the green man, traffic and guides are ready',()=>{
+    for(const [start,delta,escape] of [
+      [{x:6,z:7.8},{x:0,z:-.25},()=>true],
+      [{x:-41.2,z:-8},{x:.5,z:0},()=>true],
+    ] as const){
+      const e=new Exploration();e.position={...start};let blocked='';e.onResult=r=>{blocked=r.ruleId;};
+      expect(e.move(delta.x,delta.z)).toBe(false);expect(blocked).toBe('mapCross');
+      e.setCrossingState({green:true,trafficYielded:true,guideReady:false});
+      expect(e.move(delta.x,delta.z)).toBe(false);expect(blocked).toBe('mapCross');
+      e.setCrossingState({green:true,trafficYielded:true,guideReady:true});
+      for(let n=0;n<36&&e.activeCrossing===null;n++)expect(e.move(delta.x,delta.z)).toBe(true);
+      expect(e.activeCrossing).not.toBeNull();
+      e.setCrossingState({green:false,trafficYielded:false,guideReady:false});
+      for(let n=0;n<36&&e.activeCrossing!==null;n++)expect(e.move(delta.x,delta.z)).toBe(true);
+      expect(e.activeCrossing).toBeNull();expect(escape()).toBe(true);
+    }
+  });
+  it('the school entrance step blocks free walking until an accessibility route is placed in the human practice',()=>{
+    const e=new Exploration();e.position={x:6.5,z:-15.9};let blocked='';e.onResult=r=>{blocked=r.ruleId;};
+    expect(e.move(0,-.3)).toBe(false);expect(blocked).toBe('stepBarrier');
+    const j=new Journey(scenarios.find(s=>s.id==='human')!);expect(j.steps.map(step=>step.id)).toEqual(['observe','stakeholder','place','compare','proposal']);
+    expect(j.steps[0].target.z).toBeGreaterThan(j.steps[2].target.z);expect(j.steps[2].target.z).toBeGreaterThan(j.steps[3].target.z);
+    j.position={x:6.5,z:-15.9};expect(j.move(0,-.3)).toBe(false);expect(j.blocked?.ruleId).toBe('stepBarrier');
+    j.index=3;j.retry();j.position={x:6.5,z:-15.9};expect(j.move(0,-.3)).toBe(true);
+    j.rampPlacedAt=0;j.position={...j.current.target};expect(j.attempt('compare')).toBe(false);
+    j.elapsed=6.5;expect(j.attempt('compare')).toBe(true);
+  });
   it('the Fuxing North side approach begins in another block and has its own marked crossing',()=>{expect(crossings).toHaveLength(2);expect(crossings[1]).toMatchObject({x:-38,z:-8});const e=new Exploration();e.position={x:-43,z:-24};expect(nearbySite(e.position)?.scenario.id).toBe('walk_side');for(let z=-23;z<=-10;z++){expect(onPedestrianSpace({x:-43,z})).toBe(true);expect(e.move(0,1)).toBe(true);}expect(onMarkedCrosswalk({x:-38,z:-8})).toBe(true);expect(onMarkedCrosswalk({x:-38,z:4.5})).toBe(false);expect(e.move(5,0)).toBe(false);});
   it('pedestrian figures face the waiting sides while vehicle lights stand across both roads',()=>{
     const main=signalPlacements.main,side=signalPlacements.side;
@@ -152,7 +179,7 @@ describe.each(scenarios)('$label state machine',s=>{
   });
   it('complete valid journey satisfies every state gate including fresh arrival clearance',()=>{
     const j=new Journey(s);let count=0;
-    while(!j.complete&&count++<32){j.update(6);j.position={...j.current.target};if(j.current.rule==='cross')while(!j.yielded)j.update(1);j.update(.4);if(j.current.rule==='cross'&&!j.yielded)j.update(12);if(['parent','scooter'].includes(s.mode)&&['rear','side','alight'].includes(j.current.id)){let waits=0;while(!j.facts.rearTrafficClear&&waits++<21)j.update(1);}expect(j.attempt(j.current.action),`${s.id} / ${j.current?.id}`).toBe(true);}
+    while(!j.complete&&count++<32){j.update(6);j.position={...j.current.target};if(j.current.rule==='cross')while(!j.yielded)j.update(1);j.update(.4);if(j.current.rule==='cross'&&!j.yielded)j.update(12);if(s.mode==='human'&&j.current.id==='compare')j.update(.2);if(['parent','scooter'].includes(s.mode)&&['rear','side','alight'].includes(j.current.id)){let waits=0;while(!j.facts.rearTrafficClear&&waits++<21)j.update(1);}expect(j.attempt(j.current.action),`${s.id} / ${j.current?.id}`).toBe(true);}
     expect(j.complete).toBe(true);
   });
 });

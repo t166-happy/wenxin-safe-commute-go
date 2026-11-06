@@ -89,3 +89,44 @@ dialog>h2{padding-right:34px}.guide-panel{width:min(570px,calc(100vw - 24px));ov
   #feedback .dialog-actions{position:sticky;bottom:0;padding:8px 0 0;margin-top:6px;background:#fffdf4}
   #feedback .dialog-actions button{min-height:38px;padding:6px;font-size:10px}
 }
+
+/* Keep the route and player visible: short task cues occupy a narrow right rail. */
+#hud{top:158px;left:auto;right:24px;width:260px;z-index:3}
+#hud .chapter{gap:6px;margin-bottom:6px;padding:5px 7px;border:1px solid #fff9;border-radius:11px;background:#fffdf4e8;box-shadow:0 5px 18px #254d3b14}
+#hud .chapter small{display:none}
+#hud .chapter h1{font-size:13px;line-height:1.25;margin:0}
+#hud #scene-icon{font-size:16px;padding:5px;border-radius:7px}
+#hud-toggle{min-height:30px;font-size:10px;padding:4px 6px}
+#hud.compact .task-card{padding:7px 9px;border-radius:11px;background:#fffdf4e8}
+#hud.compact .task-card h2{font-size:13px;line-height:1.35;margin:2px 0}
+#hud.compact #quick-cue{display:block;margin:3px 0 0;min-height:0;font-size:10px;line-height:1.3;color:#7b4235}
+#hud:not(.compact) #quick-cue{display:none}
+#hud.compact #signal,#hud.compact .progress{display:none}
+#hud.context-distant .chapter{padding:5px 7px}
+#hud.context-distant .chapter{display:flex;width:fit-content;margin-left:auto}
+#hud.context-distant.compact .task-card{display:block}
+#status-banner{top:265px;right:24px;max-width:260px}
+#greeting-reminder{top:265px;right:24px}
+#explore-hud{left:auto;right:24px;width:min(260px,calc(100vw - 48px));padding:11px 13px}
+#explore-hud h1{font-size:15px}
+#explore-hud p{font-size:11px}
+#toast{right:24px;max-width:260px}
+#app:has(#hud:not(.compact)) #status-banner,#app:has(#feedback[open]) #status-banner,#app:has(#feedback[open]) #toast,#app:has(#feedback[open]) #interaction-hint{display:none}
+@media(max-width:1000px){#hud{right:16px;width:230px}#status-banner,#greeting-reminder{right:16px;max-width:230px}#explore-hud{right:16px}}
+@media(max-width:600px){
+  #hud{top:150px;left:auto;right:10px;width:184px}
+  #hud .chapter{gap:4px;padding:4px 5px}
+  #hud .chapter h1{font-size:11px}
+  #hud #scene-icon{font-size:13px;padding:4px}
+  #hud-toggle{font-size:9px;padding:3px 4px;min-height:28px}
+  #hud.compact .task-card{padding:6px 8px}
+  #hud.compact .task-card h2{font-size:11px}
+  #status-banner{top:300px;right:10px;left:auto;max-width:184px}
+  #greeting-reminder{top:300px;right:10px;width:184px}
+  #explore-hud{top:96px;left:auto;right:10px;width:184px;padding:9px 10px}
+  #explore-hud.overview{width:184px}
+  #toast{right:10px;max-width:184px}
+  #feedback[open]{top:clamp(220px,34dvh,300px);right:10px;bottom:auto;left:auto;width:min(202px,calc(100vw - 20px));max-height:min(42dvh,360px);padding:11px 12px;border-radius:14px}
+  #feedback .dialog-actions{display:grid;grid-template-columns:1fr 1fr;gap:5px}
+  #feedback .dialog-actions button{min-height:36px;padding:5px 3px;font-size:9px}
+}

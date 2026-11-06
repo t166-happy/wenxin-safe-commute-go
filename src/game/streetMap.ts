@@ -24,6 +24,7 @@ export const sidewalkRegions:Box[]=[
   {minX:-27.8,maxX:-26,minZ:-16.4,maxZ:-8}, // 側門內沿停車區西側的學生步道
   {minX:-27,maxX:-13.2,minZ:-16.4,maxZ:-13.4}, // 繞過停車區通往校舍，步道延伸至錐鏈前
   {minX:-15,maxX:-13.2,minZ:-17.3,maxZ:-15}, // 校舍前的步道末端
+  {minX:5,maxX:8,minZ:-17.3,maxZ:-12.8}, // 校舍前單階與坡道示意觀察通道
 ];
 export const frontRoad:Box={minX:-57,maxX:86,minZ:2,maxZ:7.3};
 export const otherRoads:Box[]=[
@@ -45,6 +46,7 @@ export const campusWalls:Box[]=[
 ];
 export const campusVehicleGate:Box={minX:-8.5,maxX:-3.5,minZ:-1.35,maxZ:-1.05};
 export const campusParkingArea:Box={minX:-25,maxX:-15.5,minZ:-12.5,maxZ:-1.5};
+export const schoolEntranceStep:Box={minX:5.1,maxX:7.9,minZ:-17.2,maxZ:-16.3};
 export function hitsCampusWall(from:Point,to:Point){return campusWalls.some(wall=>intersects(from,to,wall));}
 export function crossesVehicleGate(from:Point,to:Point){return intersects(from,to,campusVehicleGate);}
 export function inBox(point:Point,box:Box){return point.x>=box.minX&&point.x<=box.maxX&&point.z>=box.minZ&&point.z<=box.maxZ;}
